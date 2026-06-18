@@ -1,0 +1,34 @@
+# =============================================================
+# WomanLive 拡張機能 リポジトリ用 .gitignore
+#
+# このフォルダは WomanLive 本体のインストール先でもあり、個人データや
+# 巨大なバイナリが同居しています。事故防止のため「既定で全て無視し、
+# 拡張機能のファイルだけを明示的に追跡する」allowlist 方式にしています。
+#   - 追跡する: server/ext/ 配下、womanlive-ext.bat、README.md、LICENSE
+#   - 追跡しない: videos.db(個人データ) / .sys(Node・ffmpeg) / 本体(server,client 等)
+#                / node_modules / 配布zip など
+# =============================================================
+
+# まずルート直下を全て無視
+/*
+# server の中身も一旦無視（ext だけ後で解除するため、server ディレクトリ自体は残す）
+!/server/
+/server/*
+
+# ---- 追跡するもの（無視を解除）----
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/LICENSE
+!/womanlive-ext.bat
+!/server/ext/
+
+# ---- 念のための明示的な無視（データ・成果物・巨大物）----
+# allowlist 対象には一致しないので、誤った追加を二重に防ぎます。
+videos.db
+*.db
+*.db-shm
+*.db-wal
+*.zip
+.sys/
+node_modules/

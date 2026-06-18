@@ -1,0 +1,11 @@
+# テキストは自動判定し、リポジトリ内では LF に正規化（環境差による差分の暴れを防止）
+* text=auto eol=lf
+
+# Windows バッチは CRLF を維持
+*.bat text eol=crlf
+
+# 画像などのバイナリ
+*.png binary
+*.jpg binary
+*.webp binary
+*.zip binary

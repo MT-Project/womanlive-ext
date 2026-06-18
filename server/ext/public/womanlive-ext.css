@@ -1,0 +1,793 @@
+/* =============================================================
+   WomanLive 拡張機能 スタイル
+   既存テーマの CSS 変数 (--bg-primary 等) を流用して配色を合わせます。
+   ============================================================= */
+
+.wlext-hidden { display: none !important; }
+
+/* ---- カバー画像カード (スクリーンショット欄の先頭) ---- */
+.wlext-cover-card {
+    flex-shrink: 0;
+    width: 160px;
+    aspect-ratio: 16/9;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid var(--accent, #007acc);
+    position: relative;
+    background-color: var(--bg-tertiary, #f8f8f8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.wlext-cover-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.wlext-cover-badge {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    font-size: 10px;
+    padding: 0 4px;
+    border-radius: 2px;
+}
+
+/* ---- 評価 (★) ---- */
+.wlext-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0.2rem 0 0.6rem;
+    user-select: none;
+}
+.wlext-star {
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--border-secondary, #c9c9c9);
+    transition: transform 0.1s, color 0.1s;
+}
+.wlext-star.on { color: #f5b301; }
+.wlext-star:hover { transform: scale(1.15); }
+.wlext-rating.readonly .wlext-star { cursor: default; }
+.wlext-rating.readonly .wlext-star:hover { transform: none; }
+.wlext-rating .wlext-rating-clear {
+    font-size: 0.7rem;
+    color: var(--text-secondary, #888);
+    margin-left: 0.4rem;
+    cursor: pointer;
+}
+
+/* ---- 出演者欄 ---- */
+.wlext-performers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0.5rem 0 1rem;
+}
+.wlext-performer-card {
+    width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.wlext-performer-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: var(--bg-tertiary, #eee);
+    border: 1px solid var(--border-primary, #ddd);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #888);
+    font-size: 1.6rem;
+    overflow: hidden;
+}
+.wlext-performer-img img { width: 100%; height: 100%; object-fit: cover; }
+.wlext-performer-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-top: 0.35rem;
+    max-width: 110px;
+}
+.wlext-performer-name {
+    font-size: 0.85rem;
+    color: var(--text-primary, #222);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wlext-performer-name:hover { color: var(--accent, #007acc); text-decoration: underline; }
+.wlext-performer-search {
+    cursor: pointer;
+    color: var(--text-secondary, #888);
+    display: inline-flex;
+    flex-shrink: 0;
+}
+.wlext-performer-search:hover { color: var(--accent, #007acc); }
+.wlext-performer-age {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #888);
+    margin-top: 0.1rem;
+}
+
+/* ---- 拡張情報ブロック (型番/シリーズ等) ---- */
+.wlext-infobox {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+    background-color: var(--bg-tertiary, #f8f8f8);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: var(--text-secondary, #616161);
+    position: relative;
+}
+.wlext-detail-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1rem;
+}
+.wlext-detail-grid > .wlext-key { white-space: nowrap; }
+.wlext-detail-grid > .wlext-val { word-break: break-all; }
+.wlext-link {
+    color: var(--accent, #007acc);
+    cursor: pointer;
+}
+.wlext-link:hover { text-decoration: underline; }
+.wlext-multi { display: inline-flex; flex-wrap: wrap; gap: 0.4rem; }
+/* 値(包含リンク) + 除外ボタン のペア */
+.wlext-val-pair { display: inline-flex; align-items: center; }
+/* 除外検索ボタン: 虫メガネ＋マイナス。包含検索(accent)と明確に区別するため赤系・別アイコン */
+.wlext-exclude-btn {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    cursor: pointer; vertical-align: middle; margin-left: 0.25rem;
+    color: var(--status-error, #e51400); opacity: 0.6;
+}
+.wlext-exclude-btn:hover { opacity: 1; }
+.wlext-edit-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--bg-secondary, #eee);
+    border: 1px solid var(--border-primary, #ddd);
+    color: var(--text-secondary, #666);
+    border-radius: 0.25rem;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+}
+.wlext-edit-btn:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
+.wlext-release-ago { color: var(--text-secondary, #888); margin-left: 0.4rem; font-size: 0.8rem; }
+
+/* ---- ジャンル ---- */
+.wlext-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.wlext-genre-chip {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.6rem;
+    color: var(--text-secondary, #616161);
+    border: 1px solid var(--border-primary, #ddd);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    background: var(--bg-primary, #fff);
+    display: inline-flex;
+    align-items: center;
+}
+.wlext-genre-chip::before { content: "ジャンル: "; opacity: 0.6; }
+.wlext-genre-chip:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
+
+/* ---- 動画情報検索 FAB (品番でFANZA検索) ---- */
+.wlext-search-fab {
+    position: fixed;
+    bottom: 5.5rem;   /* 既存の編集FAB(bottom:2rem)の上 */
+    right: 2rem;
+    width: 3rem; height: 3rem; border-radius: 50%;
+    background-color: var(--accent, #007acc);
+    opacity: 0.7; color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+    z-index: 100;
+}
+.wlext-search-fab:hover { opacity: 1; }
+
+/* ---- DMM 検索結果 ---- */
+.wlext-dmm-thumb {
+    width: 120px; height: 86px; object-fit: contain; flex-shrink: 0;
+    background: #000; border-radius: 4px; border: 1px solid var(--border-primary, #444);
+}
+.wlext-dmm-select { display: flex; flex-direction: column; gap: 0.6rem; }
+.wlext-dmm-select-item {
+    display: flex; gap: 0.7rem; padding: 0.5rem; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--border-primary, #ddd);
+}
+.wlext-dmm-select-item:hover { background: var(--bg-hover, #eee); border-color: var(--accent, #007acc); }
+.wlext-dmm-select-info { min-width: 0; }
+.wlext-dmm-select-title {
+    font-size: 0.85rem; color: var(--text-primary, #222);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wlext-dmm-select-sub {
+    font-size: 0.75rem; color: var(--text-secondary, #888); margin-top: 0.2rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---- 共通ダイアログ ---- */
+.wlext-overlay {
+    position: fixed; inset: 0; z-index: 6000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
+}
+.wlext-dialog {
+    background: var(--bg-modal, #fff);
+    color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ddd);
+    border-radius: 0.5rem;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    width: min(560px, calc(100vw - 2rem));
+    max-height: 86vh;
+    display: flex; flex-direction: column;
+}
+.wlext-dialog-header {
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--border-primary, #eee);
+    font-weight: bold;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.wlext-dialog-body { padding: 1rem 1.1rem; overflow-y: auto; }
+.wlext-dialog-footer {
+    padding: 0.8rem 1.1rem;
+    border-top: 1px solid var(--border-primary, #eee);
+    display: flex; justify-content: flex-end; gap: 0.6rem;
+}
+.wlext-field { margin-bottom: 0.85rem; }
+.wlext-field > label {
+    display: block; font-size: 0.78rem; color: var(--text-secondary, #777);
+    margin-bottom: 0.25rem;
+}
+.wlext-input, .wlext-textarea {
+    width: 100%; box-sizing: border-box;
+    padding: 0.45rem 0.55rem;
+    background: var(--bg-modal, #fff);
+    color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc);
+    border-radius: 3px; font-size: 0.875rem; outline: none;
+    font-family: inherit;
+}
+.wlext-input:focus, .wlext-textarea:focus { border-color: var(--border-focus, #007acc); }
+.wlext-textarea { resize: vertical; min-height: 3.5rem; }
+.wlext-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.wlext-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; }
+.wlext-btn {
+    padding: 0.4rem 1.1rem; border-radius: 3px; cursor: pointer;
+    border: 1px solid var(--border-primary, #ccc);
+    background: transparent; color: var(--text-primary, #222); font-size: 0.875rem;
+}
+.wlext-btn:hover { background: var(--bg-hover, #eee); }
+.wlext-btn-primary {
+    background: var(--accent, #007acc); color: #fff; border: none; font-weight: bold;
+}
+.wlext-btn-primary:hover { background: var(--accent-hover, #005fa3); }
+.wlext-close-x { cursor: pointer; color: var(--text-secondary, #888); display: flex; }
+
+/* ---- タグ自動付与ルール ---- */
+.wlext-rules { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
+.wlext-rule-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.wlext-rule-select {
+    padding: 0.35rem 0.4rem; border-radius: 0.25rem; font-size: 0.85rem;
+    background: var(--bg-modal, #fff); color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc); outline: none;
+}
+.wlext-rule-val { width: 90px; flex: 0 0 auto; }
+.wlext-rule-tag { width: 130px; flex: 0 0 auto; }
+
+/* ---- プリセットタグ選択 ---- */
+.wlext-tagselect {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    align-content: flex-start; max-height: 50vh; min-height: 25vh;
+    overflow-y: auto;
+}
+.wlext-tagselect-item {
+    padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.78rem;
+    cursor: pointer; user-select: none; text-align: center;
+    border: 1px solid var(--border-primary, #ccc);
+    background: var(--bg-primary, #fff); color: var(--text-primary, #222);
+    height: fit-content;
+}
+.wlext-tagselect-item:hover { border-color: var(--accent, #007acc); }
+.wlext-tagselect-item.on {
+    background: var(--accent, #007acc); color: #fff; border-color: var(--accent, #007acc);
+}
+
+/* ---- 出演者タグ風 入力 (チップ) ---- */
+.wlext-chips {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    padding: 0.4rem; border: 1px solid var(--border-primary, #ccc);
+    border-radius: 3px; min-height: 2rem; align-content: flex-start;
+}
+.wlext-chip {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: var(--accent-light, rgba(0,122,204,0.1));
+    border: 1px solid var(--accent, #007acc);
+    color: var(--text-primary, #222);
+    border-radius: 1rem; padding: 0.1rem 0.6rem; font-size: 0.78rem;
+}
+.wlext-chip .x { cursor: pointer; opacity: 0.7; }
+.wlext-chip .x:hover { opacity: 1; }
+.wlext-chip-input {
+    border: none; outline: none; background: transparent;
+    color: var(--text-primary, #222); font-size: 0.8rem; min-width: 80px; flex: 1;
+}
+.wlext-suggest {
+    position: absolute; z-index: 7000;
+    background: var(--bg-modal, #fff); border: 1px solid var(--border-primary, #ccc);
+    border-radius: 4px; max-height: 200px; overflow-y: auto; min-width: 160px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+.wlext-suggest div { padding: 0.4rem 0.7rem; cursor: pointer; font-size: 0.85rem; }
+.wlext-suggest div:hover, .wlext-suggest div.active { background: var(--bg-hover, #eee); }
+
+/* ---- ライトボックス (画像拡大) ---- */
+.wlext-lightbox {
+    position: fixed; inset: 0; z-index: 8000;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 1rem;
+}
+.wlext-lightbox img {
+    max-width: 92vw; max-height: 82vh; object-fit: contain;
+    border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.wlext-lightbox-actions { display: flex; gap: 0.8rem; }
+
+/* ---- 画像クロッパ ---- */
+.wlext-cropper-stage {
+    width: 320px; height: 320px; margin: 0 auto;
+    overflow: hidden; position: relative;
+    background: #111; border-radius: 4px;
+    touch-action: none; cursor: grab;
+}
+.wlext-cropper-stage img {
+    position: absolute; transform-origin: 0 0; user-select: none; -webkit-user-drag: none;
+}
+.wlext-cropper-controls { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; }
+
+/* =============================================================
+   出演者ページ (React 未定義ルート /performer/:id を拡張で描画)
+   ============================================================= */
+.wlext-performer-page {
+    position: fixed; inset: 0; z-index: 4000;
+    background: var(--bg-primary, #fff);
+    color: var(--text-primary, #222);
+    overflow-y: auto;
+}
+.wlext-pp-topbar {
+    position: sticky; top: 0; z-index: 10;
+    height: 3rem; display: flex; align-items: center; gap: 1rem;
+    padding: 0 1rem;
+    background: var(--bg-secondary, #f3f3f3);
+    border-bottom: 1px solid var(--border-primary, #e4e4e4);
+}
+.wlext-pp-back {
+    cursor: pointer; color: var(--text-primary, #222);
+    display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none;
+    font-weight: bold;
+}
+.wlext-pp-back:hover { color: var(--accent, #007acc); }
+.wlext-pp-container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.2rem 4rem; }
+.wlext-pp-header { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.wlext-pp-image {
+    width: 200px; height: 200px; flex-shrink: 0;
+    border-radius: 8px; overflow: hidden; cursor: pointer;
+    background: var(--bg-tertiary, #eee);
+    border: 1px solid var(--border-primary, #ddd);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary, #999); font-size: 3rem;
+}
+.wlext-pp-image img { width: 100%; height: 100%; object-fit: cover; }
+.wlext-pp-info { flex: 1; min-width: 280px; }
+/* 氏名・ふりがな(左) と 評価(右) を並べる */
+.wlext-pp-namerow { display: flex; align-items: flex-start; gap: 1rem; }
+.wlext-pp-namecol { flex: 1; min-width: 0; }
+.wlext-pp-rating { flex-shrink: 0; }
+.wlext-pp-rating .wlext-rating { margin: 0.2rem 0 0; }
+.wlext-pp-name { font-size: 1.6rem; font-weight: bold; margin: 0; cursor: pointer; }
+.wlext-pp-name:hover { color: var(--accent, #007acc); }
+.wlext-pp-furigana { color: var(--text-secondary, #888); font-size: 0.9rem; margin-top: 0.15rem; cursor: pointer; }
+.wlext-pp-furigana:hover { color: var(--accent, #007acc); }
+
+/* 氏名/ふりがなが画像の下に回り込む狭い画面では、画像を拡大して余白を減らす
+   (情報欄 min-width:280px + 画像200px + gap を下回って縦積みになる ~540px 以下が対象) */
+@media (max-width: 540px) {
+    .wlext-pp-image {
+        width: 78vw; max-width: 420px; height: auto; aspect-ratio: 1 / 1;
+        margin: 0 auto;
+    }
+}
+.wlext-pp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.4rem 1.2rem; margin-top: 1rem;
+}
+.wlext-pp-row {
+    display: flex; gap: 0.5rem; padding: 0.35rem 0;
+    border-bottom: 1px dashed var(--border-primary, #eee); font-size: 0.9rem;
+}
+.wlext-pp-row .k { color: var(--text-secondary, #888); min-width: 5.5em; }
+.wlext-pp-row .v { color: var(--text-primary, #222); cursor: pointer; flex: 1; }
+.wlext-pp-row .v.editable:hover { background: var(--accent-light, rgba(0,122,204,0.08)); border-radius: 3px; }
+.wlext-pp-row .v.empty { color: var(--text-secondary, #aaa); font-style: italic; }
+.wlext-pp-section-title {
+    font-size: 1.1rem; font-weight: bold; margin: 2rem 0 1rem;
+    border-bottom: 1px solid var(--border-primary, #e4e4e4); padding-bottom: 0.4rem;
+}
+.wlext-pp-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+.wlext-pp-tag {
+    font-size: 0.75rem; padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border-primary, #ddd); border-radius: 0.25rem;
+    color: var(--text-secondary, #666); background: var(--bg-primary, #fff);
+}
+
+/* ---- 動画グリッド (関連動画 / 出演者ページ用 簡易) ---- */
+.wlext-video-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 1rem;
+}
+.wlext-video-card { text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0.3rem; }
+.wlext-video-thumb {
+    width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 0.4rem;
+    overflow: hidden; position: relative;
+}
+.wlext-video-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.wlext-video-thumb .noimg {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    color: #555; font-size: 0.7rem; background: #1a1a1a;
+}
+.wlext-video-dur {
+    position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
+    color: #fff; font-size: 10px; padding: 0 4px; border-radius: 2px; font-family: monospace;
+}
+.wlext-video-title {
+    font-size: 0.82rem; color: var(--text-primary, #222);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wlext-ss-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem;
+}
+.wlext-ss-card {
+    aspect-ratio: 16/9; background: #000; border-radius: 0.25rem; overflow: hidden;
+    cursor: pointer; border: 1px solid var(--border-primary, #333); position: relative;
+}
+.wlext-ss-card img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ---- 設定ページ用 拡張セクション ---- */
+.wlext-settings-section {
+    margin: 1.5rem 0; padding: 1.2rem;
+    background: var(--bg-tertiary, #f8f8f8);
+    border: 1px solid var(--border-primary, #e4e4e4);
+    border-radius: 0.5rem;
+}
+.wlext-settings-section h3 { margin: 0 0 1rem; font-size: 1rem; }
+.wlext-inline { display: flex; gap: 0.5rem; align-items: center; }
+.wlext-inline .wlext-input { flex: 1; }
+
+/* 関連動画の重み付け (設定) */
+.wlext-related-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1rem; }
+.wlext-related-field {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    font-size: 0.82rem; color: var(--text-secondary, #777);
+}
+.wlext-related-field input { width: 84px; flex: 0 0 auto; }
+@media (max-width: 520px) { .wlext-related-grid { grid-template-columns: 1fr; } }
+
+/* =============================================================
+   拡張ページ共通シェル (公開カレンダー / 出演者一覧)
+   ============================================================= */
+.wlext-ext-page {
+    position: fixed; inset: 0; z-index: 4000;
+    background: var(--bg-primary, #fff);
+    color: var(--text-primary, #222);
+    overflow-y: auto;
+}
+.wlext-relcal-title {
+    font-size: 1.2rem; font-weight: bold; margin: 0 0 1.5rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+
+/* ---- 公開カレンダー ---- */
+.wlext-relcal-year { margin-bottom: 2.5rem; }
+.wlext-relcal-year-title {
+    font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem;
+    border-bottom: 1px solid var(--border-primary, #e4e4e4);
+    padding-bottom: 0.5rem; cursor: pointer;
+}
+.wlext-relcal-year-title:hover { color: var(--accent, #007acc); }
+.wlext-relcal-months { display: flex; flex-wrap: wrap; gap: 1rem; }
+.wlext-relcal-month {
+    padding: 0.75rem 1rem; background: var(--bg-secondary, #f3f3f3);
+    border: 1px solid var(--border-primary, #e4e4e4); border-radius: 0.5rem;
+    cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+}
+.wlext-relcal-month:hover { background: var(--bg-hover, #e8e8e8); border-color: var(--accent, #007acc); }
+.wlext-relcal-month-name { font-weight: 500; }
+.wlext-relcal-month-count { font-size: 0.9rem; color: var(--text-secondary, #888); }
+
+/* ---- 出演者一覧 ---- */
+.wlext-plist-controls {
+    display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.5rem;
+}
+.wlext-plist-sortrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.wlext-plist-ctl-label { font-size: 0.85rem; color: var(--text-secondary, #888); }
+.wlext-plist-sortbtn {
+    cursor: pointer; padding: 0.35rem 0.7rem; border-radius: 0.25rem;
+    user-select: none; font-size: 0.85rem; color: var(--text-secondary, #888);
+    border: 1px solid var(--border-primary, #ddd); background: var(--bg-tertiary, #f8f8f8);
+}
+.wlext-plist-sortbtn:hover { background: var(--bg-hover, #eee); }
+.wlext-plist-sortbtn.active {
+    background: var(--accent, #007acc); color: #fff; font-weight: bold; border-color: transparent;
+}
+.wlext-plist-select {
+    padding: 0.35rem 0.5rem; border-radius: 0.25rem; font-size: 0.85rem;
+    background: var(--bg-modal, #fff); color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc); outline: none;
+}
+.wlext-plist-count { font-size: 0.85rem; color: var(--text-secondary, #888); margin-bottom: 0.8rem; }
+/* 画像140pxを最小幅とし、横幅に余白が出ないよう各カードを引き伸ばす(レスポンシブ) */
+.wlext-plist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1.2rem;
+}
+.wlext-plist-card {
+    width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center;
+    text-align: center; cursor: pointer;
+}
+.wlext-plist-card.dup .wlext-plist-name::after {
+    content: ' ⧉'; color: var(--accent, #007acc); font-size: 0.8rem;
+}
+.wlext-plist-img {
+    width: 100%; aspect-ratio: 1 / 1; height: auto; border-radius: 8px; overflow: hidden;
+    background: var(--bg-tertiary, #eee); border: 1px solid var(--border-primary, #ddd);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary, #999); font-size: 2.4rem;
+    transition: border-color 0.15s;
+}
+.wlext-plist-card:hover .wlext-plist-img { border-color: var(--accent, #007acc); }
+.wlext-plist-img img { width: 100%; height: 100%; object-fit: cover; }
+.wlext-plist-name {
+    margin-top: 0.4rem; font-size: 0.9rem; color: var(--text-primary, #222);
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wlext-plist-furi { font-size: 0.72rem; color: var(--text-secondary, #999); }
+.wlext-plist-stars { line-height: 1; margin-top: 0.15rem; }
+.wlext-plist-stars .wlext-star { font-size: 0.8rem; }
+.wlext-plist-age { font-size: 0.72rem; color: var(--text-secondary, #888); margin-top: 0.1rem; }
+.wlext-plist-stat { font-size: 0.75rem; color: var(--accent, #007acc); margin-top: 0.1rem; }
+
+/* ---- シリーズ一覧 ---- */
+.wlext-series-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.2rem;
+}
+.wlext-series-card {
+    cursor: pointer; display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;
+}
+.wlext-series-card:hover .wlext-video-thumb { outline: 2px solid var(--accent, #007acc); }
+.wlext-series-count {
+    position: absolute; top: 5px; right: 5px;
+    background: rgba(0, 0, 0, 0.78); color: #fff;
+    font-size: 0.8rem; font-weight: bold; line-height: 1.3;
+    min-width: 1.1rem; text-align: center;
+    padding: 1px 7px; border-radius: 7px;
+    z-index: 2;
+}
+.wlext-series-name {
+    font-size: 0.88rem; color: var(--text-primary, #222);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wlext-series-card:hover .wlext-series-name { color: var(--accent, #007acc); }
+.wlext-series-rating { display: flex; align-items: center; line-height: 1; }
+.wlext-series-rating .wlext-rating { margin: 0; }
+.wlext-series-rating .wlext-star { font-size: 0.85rem; }
+.wlext-series-ratingnum { font-size: 0.75rem; color: var(--text-secondary, #888); margin-left: 0.3rem; }
+
+/* ---- スクリーンショット枚数バッジ (検索カード: フォルダ名の右) ---- */
+.wlext-ss-badge {
+    display: inline-flex; align-items: center; gap: 2px;
+    vertical-align: middle; flex-shrink: 0;
+    margin-left: 0.4rem;
+    color: var(--text-secondary, #888);
+    font-size: 0.72rem; line-height: 1;
+}
+.wlext-ss-badge .wlext-ico { width: 14px; height: 14px; display: block; }
+.wlext-ss-num { font-variant-numeric: tabular-nums; }
+.wlext-ss-badge.loading { opacity: 0.45; }
+
+/* ---- ブックマーク ボタン ---- */
+.wlext-bm-btn {
+    background: transparent; border: none; cursor: pointer; padding: 0;
+    color: var(--text-secondary, #888);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; flex-shrink: 0; vertical-align: middle;
+}
+.wlext-bm-btn:hover { color: var(--accent, #007acc); }
+.wlext-bm-btn.on { color: var(--accent, #007acc); }
+.wlext-bm-inline { margin-left: 0.35rem; }
+.wlext-bm-watch {
+    width: 24px; height: 24px; margin-left: 0.5rem; vertical-align: middle;
+}
+
+/* ---- ブックマーク フォルダ選択ダイアログ ---- */
+.wlext-bm-dlg-list {
+    display: flex; flex-direction: column; gap: 0.4rem;
+    max-height: 50vh; overflow-y: auto;
+}
+.wlext-bm-dlg-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.5rem 0.75rem; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--border-primary, #ccc); font-size: 0.9rem;
+}
+.wlext-bm-dlg-item:hover { background: var(--bg-hover, #eee); }
+.wlext-bm-dlg-item.on { border-color: var(--accent, #007acc); background: var(--accent-light, rgba(0,122,204,0.08)); }
+.wlext-bm-dlg-item .chk { color: var(--accent, #007acc); font-weight: bold; }
+
+/* ---- ブックマークページ フォルダ操作 ---- */
+.wlext-bm-actions { display: flex; gap: 0.8rem; font-size: 0.75rem; margin-top: 0.1rem; }
+
+/* ---- 危険操作ボタン ---- */
+.wlext-btn-danger {
+    background: var(--status-error, #e51400); color: #fff; border: none; font-weight: bold;
+}
+.wlext-btn-danger:hover { filter: brightness(0.9); }
+
+/* =============================================================
+   一括操作 (検索結果の選択モード)
+   ============================================================= */
+.wlext-sel-fabs {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+    display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+}
+.wlext-sel-fab {
+    width: 3rem; height: 3rem; border-radius: 50%;
+    background: var(--bg-secondary, #333); color: var(--text-primary, #fff);
+    border: 1px solid var(--border-primary, #555); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0.65rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25); opacity: 0.92;
+}
+.wlext-sel-fab:hover { opacity: 1; }
+.wlext-sel-mode-btn.active { background: var(--accent, #007acc); color: #fff; border-color: transparent; }
+.wlext-sel-menu-btn { position: relative; background: var(--accent, #007acc); color: #fff; border-color: transparent; }
+.wlext-sel-menu-btn::after {
+    content: attr(data-count); position: absolute; top: -4px; right: -4px;
+    background: var(--status-error, #e51400); color: #fff; font-size: 0.7rem; font-weight: bold;
+    min-width: 1.1rem; height: 1.1rem; line-height: 1.1rem; text-align: center;
+    border-radius: 0.6rem; padding: 0 3px;
+}
+
+/* 選択チェックバッジ (カード左上) */
+.wlext-sel-badge {
+    position: absolute; top: 6px; left: 6px; z-index: 30;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.45); border: 2px solid #fff;
+    color: #fff; font-size: 14px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4); pointer-events: none;
+}
+.wlext-sel-badge.on { background: var(--accent, #007acc); border-color: #fff; }
+/* 選択中カードの強調 */
+.wlext-sel-on { outline: 3px solid var(--accent, #007acc); outline-offset: -3px; border-radius: 0.4rem; }
+
+/* メニュー */
+.wlext-sel-menu-backdrop { position: fixed; inset: 0; z-index: 6000; background: transparent; }
+.wlext-sel-menu {
+    position: fixed; bottom: 1.5rem; right: 5.2rem; z-index: 6001;
+    background: var(--bg-modal, #fff); color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc); border-radius: 0.5rem;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.3); overflow: hidden; min-width: 190px;
+}
+.wlext-sel-menu-head {
+    padding: 0.55rem 0.9rem; font-size: 0.78rem; color: var(--text-secondary, #888);
+    border-bottom: 1px solid var(--border-primary, #eee);
+}
+.wlext-sel-menu-item { padding: 0.7rem 0.95rem; cursor: pointer; font-size: 0.9rem; }
+.wlext-sel-menu-item:hover { background: var(--bg-hover, #eee); }
+.wlext-sel-menu-item.danger { color: var(--status-error, #e51400); border-top: 1px solid var(--border-primary, #eee); }
+.wlext-sel-menu-item.danger:hover { background: rgba(229,20,0,0.1); }
+
+/* ---- トースト ---- */
+.wlext-toast-wrap {
+    position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+    z-index: 9000; display: flex; flex-direction: column; gap: 0.5rem; align-items: center;
+}
+.wlext-toast {
+    background: var(--bg-modal, #333); color: var(--text-primary, #fff);
+    border: 1px solid var(--border-primary, #555);
+    border-left: 4px solid var(--accent, #007acc);
+    padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.85rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3); max-width: 80vw;
+}
+.wlext-toast.error { border-left-color: var(--status-error, #e51400); }
+.wlext-toast.success { border-left-color: var(--status-success, #388a34); }
+
+/* =============================================================
+   統一ヘッダー / ナビゲーションメニュー
+   本家ヘッダー(.nj9rcpl 等)と同じ見た目を、独自クラスで複製。
+   拡張ページではこのヘッダーを表示し、本家ページでは設定ボタンを
+   メニューボタンへ差し替える(.wlext-menu-btn / .wlext-navmenu)。
+   ============================================================= */
+/* 拡張ページ上部の共通ヘッダー (本家 .nj9rcpl を sticky で複製) */
+.wlext-nav {
+    position: sticky; top: 0; z-index: 50;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-primary, #e4e4e4);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 1rem; background-color: var(--bg-secondary, #f3f3f3); height: 3rem;
+}
+.wlext-logo { display: flex; align-items: center; flex-shrink: 0; width: auto; margin-right: 1rem; }
+.wlext-brand {
+    font-size: 1.25rem; letter-spacing: -0.1rem; color: var(--text-primary, #222);
+    font-weight: 700; text-decoration: none; font-family: sans-serif; transition: color 0.2s;
+}
+.wlext-brand:hover { color: var(--accent, #007acc); }
+.wlext-search { display: flex; flex: 1; justify-content: center; height: 2rem; }
+.wlext-search-wrap { display: flex; position: relative; width: 100%; max-width: 400px; }
+.wlext-search-input {
+    background-color: var(--bg-modal, #fff); color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc); border-radius: 0.25rem;
+    padding: 4px 10px; outline: none; width: 100%; line-height: 1.25rem; transition: all 0.2s;
+}
+.wlext-search-input:focus { border-color: var(--border-focus, #007acc); box-shadow: 0 0 0 2px var(--accent-light, rgba(0,122,204,0.2)); }
+.wlext-search-input:hover { border-color: var(--border-focus, #007acc); }
+.wlext-action {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    background-color: transparent; color: var(--text-primary, #222); cursor: pointer;
+    border: none; padding: 0.25rem; transition: opacity 0.1s;
+}
+.wlext-action:hover { color: var(--accent, #007acc); }
+.wlext-action:active { opacity: 0.5; }
+.wlext-search-btn { width: 32px; }
+.wlext-actions { display: flex; align-items: center; flex-shrink: 0; justify-content: flex-end; margin-left: 0.25rem; gap: 0.7rem; }
+
+/* メニュー(ハンバーガー)ボタン: 本家設定リンク .s1omeqqo の見た目を踏襲 */
+.wlext-menu-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; cursor: pointer; padding: 0.25rem;
+    color: var(--text-primary, #222); transition: all 0.2s;
+}
+.wlext-menu-btn:hover { color: var(--accent, #007acc); }
+.wlext-menu-btn:active { opacity: 0.5; }
+/* 本家ヘッダーに差し込んだ場合、狭幅でも操作欄(メニュー)を表示する
+   (本家は max-width:600px で操作欄を隠すため、メニューを使えるよう上書き) */
+@media (max-width: 600px) { .wlext-actions-force { display: flex !important; } }
+
+/* ドロップダウンメニュー */
+.wlext-navmenu-backdrop { position: fixed; inset: 0; z-index: 6000; background: transparent; }
+.wlext-navmenu {
+    position: fixed; z-index: 6001; min-width: 230px;
+    background: var(--bg-modal, #fff); color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc); border-radius: 0.5rem;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.3); overflow: hidden; padding: 0.3rem 0;
+}
+.wlext-navmenu-item {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.6rem 0.95rem; cursor: pointer; font-size: 0.9rem; color: var(--text-primary, #222);
+}
+.wlext-navmenu-item:hover { background: var(--bg-hover, #eee); color: var(--accent, #007acc); }
+.wlext-navmenu-item .wlext-ico { flex-shrink: 0; color: var(--text-secondary, #888); }
+.wlext-navmenu-item:hover .wlext-ico { color: var(--accent, #007acc); }
+.wlext-navmenu-sep { height: 1px; background: var(--border-primary, #e4e4e4); margin: 0.3rem 0; }
