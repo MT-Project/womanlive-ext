@@ -31,23 +31,14 @@
 - DMM 商品検索とカバー画像の取得時のみ、インターネット接続を使用します。
 
 ## 導入方法（推奨：本体を書き換えない方法）
-1. この配布物の **`ext` フォルダ**を、WomanLive の **`server` フォルダの中**へコピーします
-   （結果として `server/ext` になります）。
-2. **`womanlive-ext.bat`** を WomanLive の**ルート**（`womanlive.bat` と同じ場所）へコピーします。
-3. WomanLive を一度終了し、**`womanlive-ext.bat`** で起動します。
-   （以後、拡張機能つきで使うときは `womanlive-ext.bat` から起動してください）
-4. ブラウザ右上の設定から、必要に応じてカバー画像フォルダや DMM API ID などを設定します。
-
-### 別の導入方法（本体を1行だけ編集する場合）
-`womanlive-ext.bat` を使わず、通常の `womanlive.bat` で使いたい場合は、
-`server/index.js` の `app.use(cors());` の直後に次の1行を追加してください。
-```js
-try { require('./ext')(app); } catch (e) { console.error('[WomanLive拡張]', e); }
-```
-（この方法では `womanlive.bat` で起動できます。両方を併用しても二重には読み込まれません）
+1. [Release](https://github.com/MT-Project/womanlive-ext/releases)から最新の **`womanlive-ext.zip`**をダウンロードおよび解凍。
+2. **`ext` フォルダ**を、WomanLive の **`server` フォルダの中**へコピー（`server/ext` になればOK）。
+3. **`womanlive-ext.bat`** を WomanLive の**ルートフォルダ**（`womanlive.bat` と同じ場所）へコピー。
+4. WomanLive を一度終了し、**`womanlive-ext.bat`** から起動
+（以後、拡張機能つきで使うときは `womanlive-ext.bat` から起動してください）
 
 ## アンインストール
-- `womanlive-ext.bat` の使用をやめ、通常の `womanlive.bat` で起動すれば拡張は無効になります。
+- `womanlive-ext.bat` ではなく、通常の `womanlive.bat` から起動すれば拡張は無効になります。
 - 完全に削除する場合は `server/ext` フォルダと `womanlive-ext.bat` を削除してください。
 - 追加データも消す場合は、設定画面のバックアップでエクスポートしておいた上で、
   `videos.db` の次のテーブルを削除（DROP）してください：
