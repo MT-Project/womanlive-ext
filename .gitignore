@@ -22,7 +22,6 @@
 !/LICENSE
 !/womanlive-ext.bat
 !/server/ext/
-!/docs/
 
 # ---- 念のための明示的な無視（データ・成果物・巨大物）----
 # allowlist 対象には一致しないので、誤った追加を二重に防ぎます。
