@@ -618,6 +618,24 @@
 .wlext-ss-num { font-variant-numeric: tabular-nums; }
 .wlext-ss-badge.loading { opacity: 0.45; }
 
+/* ---- 検索結果カードの拡張 (メーカー右上 / フォルダ名→左下 / 評価) ---- */
+/* フォルダ名: 長さバッジ(.dnjkqxo)の見た目を流用し、左下へ配置 */
+.wlext-folder-ov {
+    right: auto; left: 4px; max-width: 58%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* メーカー名: サムネ右上に半透明の白字 */
+.wlext-maker-ov {
+    position: absolute; top: 4px; right: 4px; max-width: 65%;
+    color: rgba(255, 255, 255, 0.72); font-size: 10px; line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85); pointer-events: none; z-index: 2;
+}
+/* 評価: もともとフォルダ名があった位置(スクショ枚数・ブックマークと同じ行) */
+.wlext-card-rating { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
+.wlext-card-rating .wlext-rating { margin: 0; }
+.wlext-card-rating .wlext-star { font-size: 0.85rem; }
+
 /* ---- ブックマーク ボタン ---- */
 .wlext-bm-btn {
     background: transparent; border: none; cursor: pointer; padding: 0;

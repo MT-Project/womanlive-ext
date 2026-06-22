@@ -127,6 +127,8 @@ exports.search = (req, res) => {
             'ext_rating_asc': 'IFNULL(e.rating,0) ASC, f.updated_at DESC',
             'ext_screenshots_desc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) DESC, f.updated_at DESC',
             'ext_screenshots_asc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) ASC, f.updated_at DESC',
+            'ext_displayname_asc': "COALESCE(NULLIF(e.display_name,''), f.filename) ASC",
+            'ext_displayname_desc': "COALESCE(NULLIF(e.display_name,''), f.filename) DESC",
         };
         const orderBy = sortMap[sort] || sortMap['updated_desc'];
 

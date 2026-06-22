@@ -29,6 +29,36 @@
 
     function params() { return new URLSearchParams(location.search); }
 
+    // 「表示名」ソートを、既存の「名前」ボタンの右隣に配置する
+    function ensureDisplayNameBtn(bar, sort, sortClass) {
+        let nameBtn = null;
+        for (const c of bar.children) {
+            const t = (c.textContent || '').trim().replace(/[ ↑↓]/g, '');
+            if (c.tagName === 'DIV' && t === '名前') { nameBtn = c; break; }
+        }
+        if (!nameBtn) return;
+        const active = sort.startsWith('ext_displayname');
+        const label = '表示名' + (sort === 'ext_displayname_asc' ? ' ↑' : sort === 'ext_displayname_desc' ? ' ↓' : '');
+        const cls = ((sortClass ? sortClass + ' ' : '') + 'wlext-sort-dispname' + (active ? ' active' : '')).trim();
+        let btn = bar.querySelector('.wlext-sort-dispname');
+        if (!btn) {
+            btn = h('div', {
+                class: cls, onClick: () => {
+                    const np = params();
+                    np.set('sort', sort === 'ext_displayname_asc' ? 'ext_displayname_desc' : 'ext_displayname_asc');
+                    np.set('page', '1');
+                    WL.navigate('/search?' + np.toString());
+                }
+            }, label);
+            if (!sortClass) Object.assign(btn.style, { cursor: 'pointer', padding: '0.375rem 0.75rem', borderRadius: '0.25rem', background: active ? 'var(--accent,#007acc)' : 'transparent', color: active ? '#fff' : 'var(--text-secondary,#888)' });
+            nameBtn.insertAdjacentElement('afterend', btn);
+        } else {
+            btn.className = cls;
+            btn.textContent = label;
+            if (nameBtn.nextElementSibling !== btn) nameBtn.insertAdjacentElement('afterend', btn);
+        }
+    }
+
     function ensure() {
         if (location.pathname !== '/search') return;
         const bar = findSortBar();
@@ -37,13 +67,15 @@
         const p = params();
         const sort = p.get('sort') || '';
         const q = (p.get('q') || '').trim();
-        const sig = sort + '|' + q;
+        const sortClass = nativeSortClass(bar);
 
+        // 表示名ソート (名前の右)。末尾の wrap とは独立に維持する。
+        ensureDisplayNameBtn(bar, sort, sortClass);
+
+        const sig = sort + '|' + q;
         const existing = bar.querySelector('.wlext-sortenh-wrap');
         if (existing && existing.dataset.sig === sig) return; // 最新なので何もしない
         if (existing) existing.remove();
-
-        const sortClass = nativeSortClass(bar);
         const wrap = h('span', { class: 'wlext-sortenh-wrap', style: { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' } });
         wrap.dataset.sig = sig;
 

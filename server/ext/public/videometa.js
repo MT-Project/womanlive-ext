@@ -113,8 +113,7 @@
 
                 const age = WL.ageYM(p.birthday, ref);
                 const nameRow = h('div', { class: 'wlext-performer-name-row' }, [
-                    h('span', { class: 'wlext-performer-name', title: p.name, onClick: () => WL.searchBy('@performer:' + p.id) }, p.name),
-                    h('span', { class: 'wlext-performer-search', title: '同じ出演者を検索', html: searchIcon(), onClick: () => WL.searchBy('@performer:' + p.id) }),
+                    h('span', { class: 'wlext-performer-name', title: '「' + p.name + '」で検索', onClick: () => WL.searchBy('@performer:' + p.id) }, p.name),
                     excludeIcon('@notperformer:' + p.id, p.name)
                 ]);
                 const card = h('div', { class: 'wlext-performer-card' }, [
@@ -135,7 +134,7 @@
             grid.appendChild(h('div', { class: 'wlext-key' }, key + ':'));
             grid.appendChild(h('div', { class: 'wlext-val' }, valNode));
         }
-        function linkVal(text, token) { return h('span', { class: 'wlext-link', onClick: () => WL.searchBy(token) }, text); }
+        function linkVal(text, token) { return h('span', { class: 'wlext-link', title: '「' + text + '」で検索', onClick: () => WL.searchBy(token) }, text); }
         // 包含リンク + 除外ボタン(虫メガネ+マイナス) を並べる
         function valEx(text, incToken, excToken) { return h('span', { class: 'wlext-val-pair' }, [linkVal(text, incToken), excludeIcon(excToken, text)]); }
 

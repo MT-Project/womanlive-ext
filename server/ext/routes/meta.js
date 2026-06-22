@@ -106,7 +106,7 @@ exports.bulk = (req, res) => {
 
         const placeholders = ids.map(() => '?').join(',');
         const rows = db.prepare(`
-            SELECT f.id, e.display_name, e.rating
+            SELECT f.id, e.display_name, e.rating, e.maker
             FROM files f
             JOIN ext_video_meta e ON e.hash = f.hash
             WHERE f.id IN (${placeholders})
@@ -114,8 +114,8 @@ exports.bulk = (req, res) => {
 
         const map = {};
         for (const r of rows) {
-            if (r.display_name || r.rating) {
-                map[r.id] = { display_name: r.display_name || '', rating: r.rating || 0 };
+            if (r.display_name || r.rating || r.maker) {
+                map[r.id] = { display_name: r.display_name || '', rating: r.rating || 0, maker: r.maker || '' };
             }
         }
         res.json(map);

@@ -30,6 +30,15 @@ module.exports = function setupExt(app) {
     // 1. 追加テーブルを用意
     initSchema();
 
+    // 1.5 個人用モジュール (server/private) があれば読み込む。
+    //     配布物・git には含めない前提。存在しなければ何もしない(配布時は no-op)。
+    //     ext の HTML 注入(res.send)より前に private のミドルウェアを登録するため、ここで呼ぶ。
+    try {
+        if (require('fs').existsSync(path.join(__dirname, '..', 'private', 'index.js'))) {
+            require('../private')(app);
+        }
+    } catch (e) { console.error('[WomanLive private] ロードに失敗しました', e); }
+
     // 2. 拡張 API 用の JSON ボディパーサ (画像アップロードのため大きめ)
     app.use('/ext/api', express.json({ limit: '25mb' }));
 
