@@ -274,72 +274,12 @@
     /* ---------- 日付ヘルパ ---------- */
     function toDateInput(s) { const d = WL.parseDate(s); if (!d) return ''; return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
-    /* ---------- 画像クロッパ (正方形) ---------- */
+    /* ---------- 画像クロッパ (正方形) — 共通クロッパ(core.js)へ委譲 ---------- */
     function cropDialog(dataUrl, onDone) {
-        const OUT = 600;
-        const stage = h('div', { class: 'wlext-cropper-stage' });
-        const img = new Image();
-        let scale = 1, minScale = 1, ox = 0, oy = 0, nw = 0, nh = 0;
-        const STAGE = 320;
-
-        function clamp() {
-            if (scale < minScale) scale = minScale;
-            const w = nw * scale, hh = nh * scale;
-            if (ox > 0) ox = 0; if (oy > 0) oy = 0;
-            if (ox < STAGE - w) ox = STAGE - w;
-            if (oy < STAGE - hh) oy = STAGE - hh;
-        }
-        function paint() {
-            clamp();
-            img.style.width = (nw * scale) + 'px';
-            img.style.height = (nh * scale) + 'px';
-            img.style.left = ox + 'px';
-            img.style.top = oy + 'px';
-        }
-        img.onload = () => {
-            nw = img.naturalWidth; nh = img.naturalHeight;
-            minScale = Math.max(STAGE / nw, STAGE / nh);
-            scale = minScale;
-            ox = (STAGE - nw * scale) / 2; oy = (STAGE - nh * scale) / 2;
-            img.style.position = 'absolute';
-            stage.appendChild(img);
-            paint();
-        };
-        img.src = dataUrl;
-
-        // ドラッグ
-        let dragging = false, sx = 0, sy = 0;
-        function down(e) { dragging = true; const p = pt(e); sx = p.x - ox; sy = p.y - oy; stage.style.cursor = 'grabbing'; e.preventDefault(); }
-        function move(e) { if (!dragging) return; const p = pt(e); ox = p.x - sx; oy = p.y - sy; paint(); }
-        function up() { dragging = false; stage.style.cursor = 'grab'; }
-        function pt(e) { const t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
-        stage.addEventListener('mousedown', down); window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
-        stage.addEventListener('touchstart', down, { passive: false }); stage.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, { passive: false }); stage.addEventListener('touchend', up);
-
-        const zoom = h('input', { type: 'range', min: '1', max: '4', step: '0.01', value: '1', style: { flex: '1' } });
-        zoom.addEventListener('input', () => { scale = minScale * parseFloat(zoom.value); paint(); });
-
-        const body = h('div', null, [
-            stage,
-            h('div', { class: 'wlext-cropper-controls' }, [h('span', null, '拡大'), zoom]),
-            h('div', { style: { fontSize: '0.78rem', color: 'var(--text-secondary,#888)', marginTop: '0.4rem' } }, 'ドラッグで位置調整・スライダーで拡大し、正方形に切り取ります。')
-        ]);
-
-        function cleanup() { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); }
-
-        WL.dialog('画像を切り取り', body, {
-            saveLabel: '登録',
-            onSave: async (close) => {
-                const canvas = document.createElement('canvas'); canvas.width = OUT; canvas.height = OUT;
-                const ctx = canvas.getContext('2d');
-                const sSize = STAGE / scale;
-                const sxSrc = -ox / scale, sySrc = -oy / scale;
-                ctx.drawImage(img, sxSrc, sySrc, sSize, sSize, 0, 0, OUT, OUT);
-                const out = canvas.toDataURL('image/png');
-                cleanup();
-                await onDone(out);
-                close();
-            }
+        WL.cropDialog(dataUrl, onDone, {
+            aspect: [1, 1], outW: 600,
+            title: '画像を切り取り',
+            hint: 'ドラッグで位置調整・スライダーで拡大し、正方形に切り取ります。'
         });
     }
 

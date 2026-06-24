@@ -39,6 +39,12 @@
     WL.debounce = debounce;
     WL.escapeHtml = escapeHtml;
 
+    /* ---------- 名前ソート (サーバーの ext_namekey と同一ロジック) ---------- */
+    // namekey.js (UMD) を core より前に読み込み、ここで WL に公開する。
+    const NK = window.WLNameKey || { nameKey: (s) => String(s == null ? '' : s), nameCompare: (a, b) => String(a).localeCompare(String(b), 'ja') };
+    WL.nameKey = NK.nameKey;
+    WL.nameCompare = NK.nameCompare;
+
     /* ---------- 日付 / 時間 ---------- */
     function parseDate(s) {
         if (!s) return null;
@@ -208,6 +214,9 @@
         if (opts.onEdit) {
             actions.appendChild(h('button', { class: 'wlext-btn wlext-btn-primary', onClick: (e) => { e.stopPropagation(); close(); opts.onEdit(); } }, '画像を変更'));
         }
+        if (opts.onReset) {
+            actions.appendChild(h('button', { class: 'wlext-btn', onClick: (e) => { e.stopPropagation(); close(); opts.onReset(); } }, 'デフォルトに戻す'));
+        }
         actions.appendChild(h('button', { class: 'wlext-btn', onClick: (e) => { e.stopPropagation(); close(); } }, '閉じる'));
         const box = h('div', { class: 'wlext-lightbox', onClick: () => close() }, [img, actions]);
         function close() { box.remove(); document.removeEventListener('keydown', onKey); }
@@ -215,6 +224,82 @@
         document.addEventListener('keydown', onKey);
         document.body.appendChild(box);
         return close;
+    };
+
+    /* ---------- 画像クロッパ (任意アスペクト比) ---------- */
+    // WL.cropDialog(dataUrl, onDone, { aspect:[w,h], outW, hint })
+    // 出演者画像(正方形)と同じ操作感で、指定比率に切り取って dataURL(PNG) を返す。
+    WL.cropDialog = function (dataUrl, onDone, opts) {
+        opts = opts || {};
+        const aspect = opts.aspect || [1, 1];
+        const STAGE_W = 320;
+        const STAGE_H = Math.max(80, Math.round(STAGE_W * aspect[1] / aspect[0]));
+        const OUT_W = opts.outW || 600;
+        const OUT_H = Math.round(OUT_W * aspect[1] / aspect[0]);
+
+        const stage = h('div', { class: 'wlext-cropper-stage', style: { width: STAGE_W + 'px', height: STAGE_H + 'px' } });
+        const img = new Image();
+        let scale = 1, minScale = 1, ox = 0, oy = 0, nw = 0, nh = 0;
+
+        function clamp() {
+            if (scale < minScale) scale = minScale;
+            const w = nw * scale, hh = nh * scale;
+            if (ox > 0) ox = 0; if (oy > 0) oy = 0;
+            if (ox < STAGE_W - w) ox = STAGE_W - w;
+            if (oy < STAGE_H - hh) oy = STAGE_H - hh;
+        }
+        function paint() {
+            clamp();
+            img.style.width = (nw * scale) + 'px';
+            img.style.height = (nh * scale) + 'px';
+            img.style.left = ox + 'px';
+            img.style.top = oy + 'px';
+        }
+        img.onload = () => {
+            nw = img.naturalWidth; nh = img.naturalHeight;
+            minScale = Math.max(STAGE_W / nw, STAGE_H / nh);
+            scale = minScale;
+            ox = (STAGE_W - nw * scale) / 2; oy = (STAGE_H - nh * scale) / 2;
+            img.style.position = 'absolute';
+            stage.appendChild(img);
+            paint();
+        };
+        img.src = dataUrl;
+
+        let dragging = false, sx = 0, sy = 0;
+        function down(e) { dragging = true; const p = pt(e); sx = p.x - ox; sy = p.y - oy; stage.style.cursor = 'grabbing'; e.preventDefault(); }
+        function move(e) { if (!dragging) return; const p = pt(e); ox = p.x - sx; oy = p.y - sy; paint(); }
+        function up() { dragging = false; stage.style.cursor = 'grab'; }
+        function pt(e) { const t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+        stage.addEventListener('mousedown', down); window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+        stage.addEventListener('touchstart', down, { passive: false }); stage.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, { passive: false }); stage.addEventListener('touchend', up);
+
+        const zoom = h('input', { type: 'range', min: '1', max: '4', step: '0.01', value: '1', style: { flex: '1' } });
+        zoom.addEventListener('input', () => { scale = minScale * parseFloat(zoom.value); paint(); });
+
+        const body = h('div', null, [
+            stage,
+            h('div', { class: 'wlext-cropper-controls' }, [h('span', null, '拡大'), zoom]),
+            h('div', { style: { fontSize: '0.78rem', color: 'var(--text-secondary,#888)', marginTop: '0.4rem' } },
+                opts.hint || 'ドラッグで位置調整・スライダーで拡大して切り取ります。')
+        ]);
+
+        function cleanup() { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); }
+
+        WL.dialog(opts.title || '画像を切り取り', body, {
+            saveLabel: '登録',
+            onSave: async (close) => {
+                const canvas = document.createElement('canvas'); canvas.width = OUT_W; canvas.height = OUT_H;
+                const ctx = canvas.getContext('2d');
+                const sSizeW = STAGE_W / scale, sSizeH = STAGE_H / scale;
+                const sxSrc = -ox / scale, sySrc = -oy / scale;
+                ctx.drawImage(img, sxSrc, sySrc, sSizeW, sSizeH, 0, 0, OUT_W, OUT_H);
+                const out = canvas.toDataURL('image/png');
+                cleanup();
+                await onDone(out);
+                close();
+            }
+        });
     };
 
     /* ---------- トースト ---------- */

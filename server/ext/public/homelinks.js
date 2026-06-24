@@ -23,6 +23,7 @@
         container.appendChild(mk('/release-calendar', 'calendar-check', '公開カレンダー'));
         container.appendChild(mk('/series', 'library', 'シリーズ一覧'));
         container.appendChild(mk('/performers', 'users', '出演者一覧'));
+        container.appendChild(mk('/tags', 'tag', 'タグ一覧'));
     }
 
     WL.onEnsure(ensure);

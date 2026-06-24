@@ -5,11 +5,16 @@
 // 不要になった場合はこれらのテーブルを DROP すれば元に戻ります。
 // =============================================================
 const db = require('../db');
+const { nameKey } = require('./public/namekey');
 
 let initialized = false;
 
 function initSchema() {
     if (initialized) return;
+
+    // 名前ソート用のカスタム関数 (クライアント各一覧と同じ並び順にする)
+    // ORDER BY ext_namekey(列) で「かな種別を無視・数字は桁順・頭記号は無視」のソートになる。
+    db.function('ext_namekey', { deterministic: true }, (v) => nameKey(v));
 
     db.exec(`
         -- 動画ごとの拡張メタデータ (hash をキーに既存 metadata と対応)
@@ -31,6 +36,13 @@ function initSchema() {
         -- ダウンロードしたカバー画像 (フォルダ未設定でも保持できる保存先)
         CREATE TABLE IF NOT EXISTS ext_video_cover (
             hash       TEXT PRIMARY KEY,
+            image      BLOB,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- タグ一覧ページ用のカスタムサムネイル (タグ名をキーに保存)
+        CREATE TABLE IF NOT EXISTS ext_tag_thumb (
+            name       TEXT PRIMARY KEY COLLATE NOCASE,
             image      BLOB,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );

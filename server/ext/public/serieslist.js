@@ -63,13 +63,14 @@
 
         function cmp(a, b) {
             const dir = state.dir === 'asc' ? 1 : -1;
-            if (state.sort === 'name') return (a.name || '').localeCompare(b.name || '', 'ja') * dir;
-            if (state.sort === 'count') return ((a.count || 0) - (b.count || 0)) * dir || (a.name || '').localeCompare(b.name || '', 'ja');
+            const byName = WL.nameCompare(a.name, b.name);
+            if (state.sort === 'name') return byName * dir;
+            if (state.sort === 'count') return ((a.count || 0) - (b.count || 0)) * dir || byName;
             // rating: 未評価(null)は常に末尾
             const ra = a.avgRating, rb = b.avgRating;
-            if (ra == null && rb == null) return (a.name || '').localeCompare(b.name || '', 'ja');
+            if (ra == null && rb == null) return byName;
             if (ra == null) return 1; if (rb == null) return -1;
-            return (ra - rb) * dir || (a.name || '').localeCompare(b.name || '', 'ja');
+            return (ra - rb) * dir || byName;
         }
 
         function renderGrid() {

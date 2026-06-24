@@ -11,6 +11,7 @@ const cover = require('./routes/cover');
 const meta = require('./routes/meta');
 const search = require('./routes/search');
 const fullsearch = require('./routes/fullsearch');
+const tags = require('./routes/tags');
 const screenshots = require('./routes/screenshots');
 const related = require('./routes/related');
 const performers = require('./routes/performers');
@@ -68,6 +69,12 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/fullsearch', fullsearch.fullSearch);
     app.get('/ext/api/release-calendar', search.releaseCalendar);
     app.get('/ext/api/series', search.seriesList);
+
+    // -- タグ一覧 / タグサムネイル
+    app.get('/ext/api/tags', tags.list);
+    app.get('/ext/api/tag/thumb', tags.getThumb);
+    app.post('/ext/api/tag/thumb', tags.setThumb);
+    app.delete('/ext/api/tag/thumb', tags.deleteThumb);
 
     // -- スクリーンショット枚数
     app.get('/ext/api/screenshots/counts', screenshots.counts);

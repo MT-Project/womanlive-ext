@@ -45,6 +45,12 @@
         cleanupUnusedPerformers: (dryRun) => req('/ext/api/performers/cleanup-unused', jsonOpts('POST', { dryRun })),
         releaseCalendar: () => req('/ext/api/release-calendar'),
         seriesList: () => req('/ext/api/series'),
+
+        // タグ一覧 / タグサムネイル
+        tagsList: () => req('/ext/api/tags'),
+        tagThumbUrl: (name, bust) => '/ext/api/tag/thumb?name=' + encodeURIComponent(name) + (bust ? ('&t=' + bust) : ''),
+        setTagThumb: (name, dataUrl) => req('/ext/api/tag/thumb', jsonOpts('POST', { name, image: dataUrl })),
+        deleteTagThumb: (name) => req('/ext/api/tag/thumb?name=' + encodeURIComponent(name), { method: 'DELETE' }),
         getPerformerTags: () => req('/ext/api/performer-tags'),
         savePerformerTags: (tags) => req('/ext/api/performer-tags', jsonOpts('PUT', { tags })),
         getTagRules: () => req('/ext/api/performer-tag-rules'),

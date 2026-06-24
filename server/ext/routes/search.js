@@ -118,7 +118,7 @@ exports.search = (req, res) => {
         const sortMap = {
             'updated_desc': 'f.updated_at DESC',
             'updated_asc': 'f.updated_at ASC',
-            'name_asc': 'f.filename ASC',
+            'name_asc': 'ext_namekey(f.filename) ASC',
             'duration_desc': 'm.duration DESC',
             'created_desc': 'm.created_at DESC',
             'history_desc': 'm.last_played_at DESC',
@@ -127,8 +127,8 @@ exports.search = (req, res) => {
             'ext_rating_asc': 'IFNULL(e.rating,0) ASC, f.updated_at DESC',
             'ext_screenshots_desc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) DESC, f.updated_at DESC',
             'ext_screenshots_asc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) ASC, f.updated_at DESC',
-            'ext_displayname_asc': "COALESCE(NULLIF(e.display_name,''), f.filename) ASC",
-            'ext_displayname_desc': "COALESCE(NULLIF(e.display_name,''), f.filename) DESC",
+            'ext_displayname_asc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) ASC",
+            'ext_displayname_desc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) DESC",
         };
         const orderBy = sortMap[sort] || sortMap['updated_desc'];
 

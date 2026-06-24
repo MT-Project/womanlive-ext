@@ -44,7 +44,7 @@
         // 全タグ収集
         const tagSet = new Set();
         all.forEach(p => p.tags.forEach(t => tagSet.add(t)));
-        const allTags = [...tagSet].sort((a, b) => a.localeCompare(b, 'ja'));
+        const allTags = [...tagSet].sort(WL.nameCompare);
 
         container.innerHTML = '';
         const titleEl = WL.pageTitle('users', '出演者一覧（' + all.length + '名）');
@@ -145,10 +145,10 @@
             const dir = state.dir === 'asc' ? 1 : -1;
             let va = sortVal(a), vb = sortVal(b);
             const ea = (va === null || va === ''), eb = (vb === null || vb === '');
-            if (ea && eb) return (a.name || '').localeCompare(b.name || '', 'ja');
+            if (ea && eb) return WL.nameCompare(a.name, b.name);
             if (ea) return 1; if (eb) return -1;           // 未設定は常に末尾
             if (typeof va === 'number') return (va - vb) * dir;
-            return String(va).localeCompare(String(vb), 'ja') * dir;
+            return WL.nameCompare(String(va), String(vb)) * dir;
         }
 
         function renderGrid() {
