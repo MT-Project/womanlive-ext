@@ -15,7 +15,6 @@ const tags = require('./routes/tags');
 const screenshots = require('./routes/screenshots');
 const related = require('./routes/related');
 const performers = require('./routes/performers');
-const importer = require('./routes/import');
 const tagrules = require('./routes/tagrules');
 const dmm = require('./routes/dmm');
 const bookmark = require('./routes/bookmark');
@@ -113,10 +112,6 @@ module.exports = function setupExt(app) {
     app.post('/ext/api/bulk/meta', bulk.meta);
     app.post('/ext/api/bulk/bookmark', bulk.bookmark);
     app.post('/ext/api/bulk/delete', bulk.delete);
-
-    // -- JSON 一括取込
-    app.post('/ext/api/import/mb', importer.importMb);
-    app.post('/ext/api/import/performers', importer.importPerformers);
 
     // -- 出演者
     app.get('/ext/api/performers/all', performers.all);

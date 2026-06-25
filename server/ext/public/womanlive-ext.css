@@ -3,6 +3,55 @@
    既存テーマの CSS 変数 (--bg-primary 等) を流用して配色を合わせます。
    ============================================================= */
 
+/* =============================================================
+   拡張機能ON時のテーマ配色 (WomanLiveEX)
+   本家の CSS 変数を上書きし、拡張つきで起動中だと一目で分かる配色にする。
+   本家CSSの後に読み込まれるため、同セレクタ・同特異度で上書きできる。
+   status-* (成功/エラー等の意味色) は本家のまま変更しない。
+   ============================================================= */
+/* ライトモード: 背景 #F2F2F2 / 文字 #685454 / アクセント #EA8A8A */
+:root {
+    --bg-primary: #F2F2F2;
+    --bg-secondary: #E7E0E0;
+    --bg-tertiary: #ECE6E6;
+    --bg-modal: #FFFFFF;
+    --bg-hover: #E4D9D9;
+    --bg-selected: #F6DFDF;
+    --text-primary: #685454;
+    --text-secondary: #927E7E;
+    --text-inverse: #FFFFFF;
+    --border-primary: #DCD0D0;
+    --border-secondary: #CCBEBE;
+    --border-focus: #EA8A8A;
+    --accent: #EA8A8A;
+    --accent-hover: #DE6F6F;
+    --accent-light: rgba(234, 138, 138, 0.18);
+    --glass: rgba(242, 242, 242, 0.9);
+    --card-bg: #FFFFFF;
+    --border-color: #DCD0D0;
+}
+/* ダークモード: 背景 #000000 / 文字 #FFDEDE / アクセント #CF0F47 */
+.dark {
+    --bg-primary: #000000;
+    --bg-secondary: #140309;
+    --bg-tertiary: #1E0810;
+    --bg-modal: #14060B;
+    --bg-hover: #2A0F18;
+    --bg-selected: #3A1422;
+    --text-primary: #FFDEDE;
+    --text-secondary: #C99A9A;
+    --text-inverse: #FFFFFF;
+    --border-primary: #3A1A24;
+    --border-secondary: #4D2230;
+    --border-focus: #CF0F47;
+    --accent: #CF0F47;
+    --accent-hover: #A50C39;
+    --accent-light: rgba(207, 15, 71, 0.22);
+    --glass: rgba(0, 0, 0, 0.92);
+    --card-bg: #14060B;
+    --border-color: #3A1A24;
+}
+
 .wlext-hidden { display: none !important; }
 
 /* ---- カバー画像カード (スクリーンショット欄の先頭) ---- */
@@ -481,6 +530,9 @@
     border-radius: 0.5rem;
 }
 .wlext-settings-section h3 { margin: 0 0 1rem; font-size: 1rem; }
+/* 拡張機能セクション見出し: 先頭にモノクロ puzzle アイコン */
+.wlext-settings-section h3.wlext-ext-h3 { display: flex; align-items: center; gap: 0.4rem; }
+.wlext-ext-h3 .wlext-ico { width: 16px; height: 16px; flex-shrink: 0; }
 .wlext-inline { display: flex; gap: 0.5rem; align-items: center; }
 .wlext-inline .wlext-input { flex: 1; }
 
@@ -667,6 +719,22 @@
 .wlext-bm-watch {
     width: 24px; height: 24px; margin-left: 0.5rem; vertical-align: middle;
 }
+/* 動画ページ: ブックマークを FAB 化 (動画情報取得=5.5rem・タグ編集=2rem の上=9rem) */
+.wlext-bm-btn.wlext-bm-fab {
+    position: fixed;
+    bottom: 9rem;
+    right: 2rem;
+    width: 3rem; height: 3rem;
+    border-radius: 50%;
+    background-color: var(--accent, #007acc);
+    color: #fff;
+    opacity: 0.7;
+    padding: 0.7rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+}
+.wlext-bm-btn.wlext-bm-fab:hover { opacity: 1; color: #fff; background-color: var(--accent, #007acc); }
+.wlext-bm-btn.wlext-bm-fab.on { color: #fff; }
 
 /* ---- ブックマーク フォルダ選択ダイアログ ---- */
 .wlext-bm-dlg-list {
@@ -827,3 +895,30 @@
 .wlext-navmenu-item .wlext-ico { flex-shrink: 0; color: var(--text-secondary, #888); }
 .wlext-navmenu-item:hover .wlext-ico { color: var(--accent, #007acc); }
 .wlext-navmenu-sep { height: 1px; background: var(--border-primary, #e4e4e4); margin: 0.3rem 0; }
+
+/* ---- 検索ヘルプ (？ボタン + ポップオーバー) ---- */
+.wlext-help-btn { color: var(--text-primary, #222); padding: 0.25rem; }
+.wlext-help-btn:hover { color: var(--accent, #007acc); }
+.wlext-help-btn .wlext-ico { width: 20px; height: 20px; display: block; }
+.wlext-help-pop {
+    position: fixed; z-index: 6100; display: none;
+    width: min(440px, calc(100vw - 1rem));
+    max-height: 72vh; overflow-y: auto;
+    background: var(--bg-modal, #fff); color: var(--text-primary, #222);
+    border: 1px solid var(--border-primary, #ccc); border-radius: 0.5rem;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    padding: 0.9rem 1rem; font-size: 0.82rem; line-height: 1.5;
+}
+.wlext-help-pop .wlext-help-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.4rem; }
+.wlext-help-pop h4 {
+    margin: 0.85rem 0 0.35rem; font-size: 0.85rem; color: var(--accent, #007acc);
+    border-bottom: 1px solid var(--border-primary, #eee); padding-bottom: 0.2rem;
+}
+.wlext-help-row { display: flex; gap: 0.6rem; padding: 0.18rem 0; align-items: baseline; }
+.wlext-help-code {
+    flex: 0 0 10em; font-family: monospace; font-size: 0.76rem;
+    color: var(--text-primary, #222); background: var(--bg-tertiary, #f0f0f0);
+    border-radius: 3px; padding: 0.08rem 0.35rem; word-break: break-all;
+}
+.wlext-help-desc { flex: 1; color: var(--text-secondary, #555); }
+.wlext-help-note { font-size: 0.76rem; color: var(--text-secondary, #888); margin: 0.2rem 0; }

@@ -6,6 +6,11 @@
     'use strict';
     const WL = window.WLExt; const h = WL.h;
 
+    // 拡張機能セクションの見出し (先頭に 🧩 のモノクロアイコン)
+    function extH3(text) {
+        return h('h3', { class: 'wlext-ext-h3' }, [WL.icon('puzzle', 16), h('span', null, text)]);
+    }
+
     function findContainer() {
         const root = document.getElementById('root'); if (!root) return null;
         const h2s = root.querySelectorAll('h2');
@@ -25,7 +30,7 @@
         if (found.container.querySelector('.wlext-settings-host')) return;
 
         const host = h('div', { class: 'wlext-settings-host wlext-settings-section' });
-        host.appendChild(h('h3', null, '🧩 拡張機能 (カバー画像)'));
+        host.appendChild(extH3('拡張機能：カバー画像'));
 
         const input = h('input', { class: 'wlext-input', placeholder: '(例) C:\\covers', value: '' });
         const browseBtn = h('button', { class: 'wlext-btn', onClick: () => openFolderPicker((p) => { input.value = p; }) }, '参照...');
@@ -39,7 +44,7 @@
 
         // ---- DMM(FANZA) 商品検索API 設定 ----
         const dmmSection = h('div', { class: 'wlext-settings-host wlext-settings-section' });
-        dmmSection.appendChild(h('h3', null, '🧩 DMM(FANZA) 商品検索API'));
+        dmmSection.appendChild(extH3('拡張機能：DMM(FANZA) 商品検索API'));
         dmmSection.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
             '各動画ページの🔍ボタンで品番からFANZA商品情報を検索し、メタデータへ自動設定します。利用にはご自身のDMMアカウントで取得したAPI IDとアフィリエイトIDが必要です。'));
         const apiIn = h('input', { class: 'wlext-input', placeholder: 'API ID', value: '' });
@@ -62,34 +67,8 @@
             affIn.value = s.dmm_affiliate_id || '';
         }).catch(() => { });
 
-        // ---- JSON 一括取込セクション (動画 / 出演者) ----
-        const videoBlock = buildImportBlock({
-            title: '🧩 動画メタデータ取込 (MovieBrowser JSON)',
-            desc: 'MovieBrowser 形式の動画 JSON を読み込み、動画ファイル名(拡張子なし)が一致する動画へ評価・タグ・品番・出演者などを一括設定します。',
-            apiFn: (payload) => WL.api.importMb(payload),
-            format: (r, dryRun) =>
-                (dryRun ? '【プレビュー結果（未保存）】\n' : '【取込完了】\n') +
-                `JSON件数: ${r.jsonCount} / DB動画数: ${r.total}\n` +
-                `一致: ${r.matched} 件  →  設定対象: ${r.updated} 件\n` +
-                `タグ更新: ${r.tagUpdated} 件  出演者${dryRun ? '(新規予定)' : '(新規作成)'}: ${r.performersCreated} 名\n` +
-                `情報なしでスキップ: ${r.skippedNoInfo} 件  未一致: ${r.unmatched} 件`,
-            okMsg: (r) => `メタデータを ${r.updated} 件に設定しました`,
-        });
-        const performerBlock = buildImportBlock({
-            title: '🧩 出演者情報取込 (MovieBrowser JSON)',
-            desc: '出演者 JSON を読み込み、名前が一致する既存の出演者へ ふりがな・誕生日・スリーサイズ・別名・タグ・画像 を一括設定します。先に「動画メタデータ取込」で出演者を作成しておいてください。',
-            apiFn: (payload) => WL.api.importPerformers(payload),
-            format: (r, dryRun) =>
-                (dryRun ? '【プレビュー結果（未保存）】\n' : '【取込完了】\n') +
-                `JSON件数: ${r.jsonCount}\n` +
-                `一致: ${r.matched} 名  →  設定対象: ${r.updated} 名\n` +
-                `画像${dryRun ? '(登録予定)' : '(登録)'}: ${r.imageSet} 件  画像読込失敗: ${r.imageMissing} 件\n` +
-                `情報なしでスキップ: ${r.skippedNoInfo} 名  未一致(DBに不在): ${r.unmatched} 名`,
-            okMsg: (r) => `出演者情報を ${r.updated} 名に設定しました`,
-        });
-
-        found.container.insertBefore(performerBlock, found.firstSection);
-        found.container.insertBefore(videoBlock, found.firstSection);
+        // 注: JSON 一括取込 (動画/出演者) は個人用(private)へ移設しました。
+        //     設定ページへのUI注入は server/private/public/importui.js が行います。
         found.container.insertBefore(buildTagRuleSection(), found.firstSection);
         found.container.insertBefore(buildRelatedSection(), found.firstSection);
         found.container.insertBefore(buildBackupSection(), found.firstSection);
@@ -107,7 +86,7 @@
         ];
 
         const block = h('div', { class: 'wlext-settings-host wlext-settings-section' });
-        block.appendChild(h('h3', null, '🧩 関連動画（重み付け）'));
+        block.appendChild(extH3('拡張機能：関連動画（重み付け）'));
         block.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
             '動画ページの「関連動画」を、拡張メタデータ（シリーズ・出演者・メーカー等）の一致度で選びます。各項目の点数（重み）を調整できます（0 でその項目は無視）。シリーズ最重視が既定です。保存すると以後の表示に反映され（必要時に再計算）、「全再計算」で全動画を今すぐ計算し直します（横断的な変更も反映）。'));
 
@@ -158,7 +137,7 @@
     // バックアップ (エクスポート / インポート) セクション
     function buildBackupSection() {
         const block = h('div', { class: 'wlext-settings-host wlext-settings-section' });
-        block.appendChild(h('h3', null, '🧩 バックアップ（追加機能データ）'));
+        block.appendChild(extH3('拡張機能：バックアップ（追加機能データ）'));
         block.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
             '拡張機能のデータ（動画の追加メタデータ・出演者情報と画像・出演者タグのプリセット・タグ付与ルール・ブックマーク・各種設定）を JSON で書き出し／復元します。動画ファイル自体やWomanLive標準のデータは含みません。'));
 
@@ -228,7 +207,7 @@
         const OPS = [['>=', '≧'], ['<=', '≦'], ['>', '>'], ['<', '<'], ['=', '='], ['≠', '≠'], ['含む', '含む']];
 
         const block = h('div', { class: 'wlext-settings-host wlext-settings-section' });
-        block.appendChild(h('h3', null, '🧩 出演者タグ 自動付与ルール'));
+        block.appendChild(extH3('拡張機能：出演者タグ 自動付与ルール'));
         block.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
             '条件に合う出演者へ自動でタグを付けます（例: 身長 ≧ 170 → 高身長）。「適用」で全出演者に一括付与します（出演者情報の取込時にも自動で付与されます）。'));
 
@@ -292,54 +271,6 @@
             else addRow({ field: 'height', op: '>=', value: '170', tag: '高身長' });
         }).catch(() => addRow({}));
 
-        return block;
-    }
-
-    // 取込ブロック (ファイル選択 + プレビュー/実行) を生成
-    function buildImportBlock({ title, desc, apiFn, format, okMsg }) {
-        const block = h('div', { class: 'wlext-settings-host wlext-settings-section' });
-        block.appendChild(h('h3', null, title));
-        block.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } }, desc));
-
-        let entries = null;
-        const fileInput = h('input', { type: 'file', accept: '.json,application/json' });
-        const status = h('div', { style: { fontSize: '0.82rem', margin: '0.5rem 0', color: 'var(--text-secondary,#777)' } }, '※ JSON ファイルを選択してください');
-        fileInput.addEventListener('change', () => {
-            const f = fileInput.files && fileInput.files[0]; if (!f) return;
-            const label = f.name; status.textContent = '読み込み中...';
-            const rd = new FileReader();
-            rd.onload = () => {
-                try {
-                    entries = JSON.parse(rd.result);
-                    if (!Array.isArray(entries)) { entries = null; status.textContent = '配列形式の JSON ではありません'; return; }
-                    status.textContent = label + ' : ' + entries.length + ' 件を読み込みました';
-                } catch (e) { entries = null; status.textContent = 'JSON 解析エラー: ' + e.message; }
-            };
-            rd.readAsText(f);
-        });
-
-        const ovwChk = h('input', { type: 'checkbox' });
-        const ovwLabel = h('label', { style: { fontSize: '0.82rem', cursor: 'pointer' } }, [ovwChk, ' 既存の値も上書きする (既定: 空欄のみ補完・複数値は統合)']);
-        const result = h('div', { style: { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' } });
-
-        async function run(dryRun) {
-            if (!entries) { WL.toast('先に JSON ファイルを選択してください', 'error'); return; }
-            result.textContent = (dryRun ? 'プレビュー' : '取込') + '中... しばらくお待ちください';
-            try {
-                const r = await apiFn({ entries, overwrite: ovwChk.checked, dryRun });
-                result.textContent = format(r, dryRun);
-                if (!dryRun) WL.toast(okMsg(r), 'success');
-            } catch (e) { result.textContent = 'エラー: ' + e.message; WL.toast('取込に失敗: ' + e.message, 'error'); }
-        }
-
-        block.appendChild(fileInput);
-        block.appendChild(status);
-        block.appendChild(h('div', { style: { margin: '0.4rem 0' } }, ovwLabel));
-        block.appendChild(h('div', { class: 'wlext-inline' }, [
-            h('button', { class: 'wlext-btn', onClick: () => run(true) }, 'プレビュー'),
-            h('button', { class: 'wlext-btn wlext-btn-primary', onClick: () => run(false) }, '取込実行')
-        ]));
-        block.appendChild(result);
         return block;
     }
 

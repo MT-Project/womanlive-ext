@@ -64,10 +64,6 @@
         performerVideos: (id) => req('/ext/api/performer/' + id + '/videos'),
         performerScreenshots: (id) => req('/ext/api/performer/' + id + '/screenshots'),
 
-        // JSON 一括取込
-        importMb: (payload) => req('/ext/api/import/mb', jsonOpts('POST', payload)),
-        importPerformers: (payload) => req('/ext/api/import/performers', jsonOpts('POST', payload)),
-
         // ブックマーク
         bmFolders: () => req('/ext/api/bookmark/folders'),
         bmCreateFolder: (name) => req('/ext/api/bookmark/folders', jsonOpts('POST', { name })),

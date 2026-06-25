@@ -30,7 +30,9 @@
         'zoom-out': '<circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/>',
         sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
         moon: '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>',
-        menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>'
+        menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
+        help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+        puzzle: '<path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/>'
     };
 
     function iconSvg(name, size, sw) {
@@ -136,6 +138,98 @@
     }
     WL.makeMenuBtn = makeMenuBtn;
 
+    /* ---------- 検索ヘルプ (？ボタン + ポップオーバー) ---------- */
+    // PCはホバー、タッチはタップで表示。本家の検索構文と拡張の検索方法を案内。
+    let helpPop = null, helpPinned = false, helpTimer = null, helpAnchor = null;
+
+    function helpRow(code, desc) {
+        return h('div', { class: 'wlext-help-row' }, [
+            h('code', { class: 'wlext-help-code' }, code),
+            h('span', { class: 'wlext-help-desc' }, desc)
+        ]);
+    }
+    function buildHelpContent() {
+        return [
+            h('div', { class: 'wlext-help-title' }, '検索のヘルプ'),
+            h('h4', null, '基本 (WomanLive)'),
+            helpRow('犬 猫', 'AND 検索（すべて含む）'),
+            helpRow('犬 OR 猫', 'OR 検索（どちらかを含む）'),
+            helpRow('"Woman Live"', '空白を含む語句をそのまま検索'),
+            helpRow('-犬', '除外（その語を含まない）'),
+            helpRow('!犬', '指定したタグを含む動画'),
+            helpRow('~ (先頭)', '正規化検索（全角/半角・ひらがな/カタカナを区別しない）'),
+            h('div', { class: 'wlext-help-note' }, '照合対象: ファイルパス・タグ・表示動画名'),
+            h('h4', null, '日付・再生時間'),
+            helpRow('>2024/01/01', '指定した日以降に登録した動画'),
+            helpRow('<2024/12/31', '指定した日以前に登録した動画'),
+            helpRow('>30', '再生時間が 30 分より長い'),
+            helpRow('<10', '再生時間が 10 分より短い'),
+            h('h4', null, '拡張機能の検索'),
+            h('div', { class: 'wlext-help-note' }, '動画ページや各一覧のリンク・ボタンから自動入力されます（手入力も可）。'),
+            helpRow('@maker:"名前"', 'メーカー名で検索（series / label / genre / director も同様）'),
+            helpRow('@model:"品番"', '品番で検索'),
+            helpRow('@tag:"名前"', 'タグで検索'),
+            helpRow('@performer:ID', '出演者で検索'),
+            helpRow('@rating:4', '評価で検索（@rating:>=4 など演算子も可）'),
+            helpRow('@releaseyear:"2024"', '公開年（@releasemonth:"2024-01" / @release:none も可）'),
+            helpRow('@bookmark:ID', 'ブックマークフォルダで検索'),
+            helpRow('@notmaker:"名前"', '除外（notseries / notlabel / notgenre / notdirector / notperformer）')
+        ];
+    }
+    function ensureHelpPop() {
+        if (helpPop) return helpPop;
+        helpPop = h('div', { class: 'wlext-help-pop' }, buildHelpContent());
+        helpPop.addEventListener('mouseenter', () => clearTimeout(helpTimer));
+        helpPop.addEventListener('mouseleave', () => { if (!helpPinned) helpTimer = setTimeout(hideHelp, 200); });
+        document.body.appendChild(helpPop);
+        return helpPop;
+    }
+    function positionHelp() {
+        if (!helpPop || !helpAnchor) return;
+        const r = helpAnchor.getBoundingClientRect();
+        helpPop.style.top = (r.bottom + 8) + 'px';
+        const w = helpPop.offsetWidth || 360;
+        let left = r.right - w;
+        const maxLeft = window.innerWidth - 8 - w;
+        if (left > maxLeft) left = maxLeft;
+        if (left < 8) left = 8;
+        helpPop.style.left = left + 'px';
+    }
+    function showHelp(anchor) { helpAnchor = anchor; ensureHelpPop(); helpPop.style.display = 'block'; positionHelp(); }
+    function hideHelp() { if (helpPop) helpPop.style.display = 'none'; helpPinned = false; }
+
+    function makeHelpBtn() {
+        const btn = h('button', { class: 'wlext-action wlext-help-btn', type: 'button', title: '検索のヘルプ' });
+        btn.innerHTML = iconSvg('help', 20, 2);
+        btn.addEventListener('mouseenter', () => { clearTimeout(helpTimer); showHelp(btn); });
+        btn.addEventListener('mouseleave', () => { if (helpPinned) return; helpTimer = setTimeout(hideHelp, 200); });
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const open = helpPop && helpPop.style.display === 'block';
+            if (helpPinned && open) hideHelp();
+            else { helpPinned = true; showHelp(btn); }
+        });
+        return btn;
+    }
+    WL.makeHelpBtn = makeHelpBtn;
+
+    document.addEventListener('click', (e) => {
+        if (helpPop && helpPop.style.display === 'block' &&
+            !helpPop.contains(e.target) && !(e.target.closest && e.target.closest('.wlext-help-btn'))) hideHelp();
+    });
+    window.addEventListener('resize', () => { if (helpPop && helpPop.style.display === 'block') positionHelp(); });
+
+    // 本家ヘッダーの検索(虫めがね)ボタンの右に ? を差し込む (拡張ヘッダーは pageHeader 側で配置)
+    function patchSearchHelp() {
+        document.querySelectorAll('nav').forEach(nav => {
+            if (nav.classList.contains('wlext-nav')) return;
+            const searchBtn = nav.querySelector('div[title="検索"]');
+            if (!searchBtn || !searchBtn.parentElement) return;
+            if (searchBtn.parentElement.querySelector('.wlext-help-btn')) return;
+            searchBtn.insertAdjacentElement('afterend', makeHelpBtn());
+        });
+    }
+
     /* ---------- 拡張ページ共通ヘッダー (本家ヘッダーと同じ構成) ---------- */
     function themeBtn() {
         const b = h('button', { class: 'wlext-action', type: 'button' });
@@ -152,7 +246,7 @@
     WL.pageHeader = function () {
         // ロゴ
         const logo = h('div', { class: 'wlext-logo' },
-            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'WomanLive'));
+            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'WomanLiveEX'));
         // 検索
         const input = h('input', { class: 'wlext-search-input', type: 'text', placeholder: '動画を検索...', spellcheck: 'false' });
         const submit = () => {
@@ -165,7 +259,8 @@
         const searchBtn = h('div', { class: 'wlext-action wlext-search-btn', title: '検索', onClick: submit }, WL.icon('search', 20));
         const search = h('div', { class: 'wlext-search' }, [
             h('div', { class: 'wlext-search-wrap' }, input),
-            searchBtn
+            searchBtn,
+            makeHelpBtn()
         ]);
         // 右側操作
         const actions = h('div', { class: 'wlext-actions' }, [themeBtn(), makeMenuBtn()]);
@@ -196,7 +291,14 @@
         }
     }
 
-    WL.onEnsure(() => { patchReactHeader(); maybeOpenQR(); });
+    // 本家ヘッダーのロゴ「WomanLive」を「WomanLiveEX」へ置換 (拡張起動中の目印)
+    function patchBrand() {
+        document.querySelectorAll('a[href="/"]').forEach(a => {
+            if (a.childElementCount === 0 && a.textContent.trim() === 'WomanLive') a.textContent = 'WomanLiveEX';
+        });
+    }
+
+    WL.onEnsure(() => { patchReactHeader(); patchBrand(); patchSearchHelp(); maybeOpenQR(); });
 
     /* ---------- ページ見出し (アイコン + テキスト) ---------- */
     WL.pageTitle = function (iconName, text) {

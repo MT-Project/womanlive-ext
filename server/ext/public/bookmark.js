@@ -107,15 +107,14 @@
     }
 
     /* ---------- ボタン注入 ---------- */
-    // 動画ページ: 表示名(h1)の後
+    // 動画ページ: 「動画情報取得」「タグ編集」と同じ FAB として配置
+    // (上から ブックマーク → 動画情報取得 → タグ編集 の順になるよう最上段に置く)
     function ensureWatch() {
         const vid = WL.matchWatch(); if (!vid) return;
-        const root = document.getElementById('root'); if (!root) return;
-        const h1 = root.querySelector('h1'); if (!h1) return;
-        if (root.querySelector('.wlext-bm-watch')) return;
+        if (document.querySelector('.wlext-bm-fab')) return;
         const btn = makeBtn(vid);
-        btn.classList.add('wlext-bm-watch');
-        h1.insertAdjacentElement('afterend', btn);
+        btn.classList.add('wlext-bm-watch', 'wlext-bm-fab');
+        document.body.appendChild(btn);
     }
 
     // 一覧カード: フォルダ名の右
