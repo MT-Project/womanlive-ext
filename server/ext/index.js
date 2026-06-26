@@ -74,6 +74,12 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/tag/thumb', tags.getThumb);
     app.post('/ext/api/tag/thumb', tags.setThumb);
     app.delete('/ext/api/tag/thumb', tags.deleteThumb);
+    // -- 動画タグ プリセットのグループレイアウト (# 見出し入り)
+    app.get('/ext/api/video-tag-layout', tags.getVideoTagLayout);
+    app.put('/ext/api/video-tag-layout', tags.setVideoTagLayout);
+    // -- 動画単体のタグ 取得/設定
+    app.get('/ext/api/video/:id/tags', tags.getVideoTags);
+    app.put('/ext/api/video/:id/tags', tags.setVideoTags);
 
     // -- スクリーンショット枚数
     app.get('/ext/api/screenshots/counts', screenshots.counts);

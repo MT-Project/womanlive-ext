@@ -93,9 +93,15 @@
         bulkBookmark: (ids, folderId) => req('/ext/api/bulk/bookmark', jsonOpts('POST', { ids, folderId })),
         bulkDelete: (ids) => req('/ext/api/bulk/delete', jsonOpts('POST', { ids })),
 
-        // 動画タグ プリセット (本体の /api/tags を利用)
+        // 動画タグ プリセット (本体の /api/tags を利用。実タグのみ。# 見出しは含めない)
         getVideoPresetTags: () => req('/api/tags').then(a => Array.isArray(a) ? a.map(t => (t && t.name) || t).filter(Boolean) : []),
         saveVideoPresetTags: (tags) => req('/api/tags/bulk', jsonOpts('PUT', { tags })),
+        // 動画タグ プリセットのグループレイアウト (# 見出し入り。ext 側に保持)
+        getVideoTagLayout: () => req('/ext/api/video-tag-layout'),
+        saveVideoTagLayout: (layout) => req('/ext/api/video-tag-layout', jsonOpts('PUT', { layout })),
+        // 動画単体のタグ 取得/設定
+        getVideoTags: (id) => req('/ext/api/video/' + id + '/tags'),
+        setVideoTags: (id, tags) => req('/ext/api/video/' + id + '/tags', jsonOpts('PUT', { tags })),
 
         // 既存 API (フォルダ参照に流用)
         fsList: (p) => req('/api/fs/list?path=' + encodeURIComponent(p)),

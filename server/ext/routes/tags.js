@@ -7,7 +7,7 @@
 //
 // 動画タグは本体 metadata.tags に改行区切りで保存されている (無改変)。
 // =============================================================
-const { db, splitList } = require('../db');
+const { db, splitList, getSetting, setSetting } = require('../db');
 
 let sharp = null;
 try { sharp = require('sharp'); } catch (e) { /* 変換なしでも動作 */ }
@@ -15,6 +15,44 @@ try { sharp = require('sharp'); } catch (e) { /* 変換なしでも動作 */ }
 // 推奨サムネイル: 16:9 (シリーズ一覧カードと同じ比率)
 const THUMB_W = 640;
 const THUMB_H = 360;
+
+// --- 動画タグのプリセット グループレイアウト ---
+// 本家 preset_tags は実タグのみ(無改変)。"#" を含むグループ定義は ext 側に保持する。
+const VIDEO_TAG_LAYOUT_KEY = 'ext_video_tag_layout';
+exports.getVideoTagLayout = (req, res) => {
+    try {
+        const arr = getSetting(VIDEO_TAG_LAYOUT_KEY, []);
+        res.json(Array.isArray(arr) ? arr : []);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+exports.setVideoTagLayout = (req, res) => {
+    try {
+        const arr = (req.body && req.body.layout) || [];
+        const clean = Array.isArray(arr) ? arr.map(s => String(s)).map(s => s.trim()).filter(Boolean) : [];
+        setSetting(VIDEO_TAG_LAYOUT_KEY, clean);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+// --- 動画単体のタグ 取得/設定 (本家 metadata.tags を直接読み書き) ---
+exports.getVideoTags = (req, res) => {
+    try {
+        const row = db.prepare('SELECT m.tags AS tags FROM files f JOIN metadata m ON m.hash = f.hash WHERE f.id = ?').get(req.params.id);
+        res.json({ tags: row ? splitList(row.tags) : [] });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+exports.setVideoTags = (req, res) => {
+    try {
+        const row = db.prepare('SELECT hash FROM files WHERE id = ?').get(req.params.id);
+        if (!row) return res.status(404).json({ error: '動画が見つかりません' });
+        const arr = (req.body && req.body.tags) || [];
+        const clean = Array.isArray(arr) ? [...new Set(arr.map(s => String(s).trim()).filter(Boolean))] : [];
+        // 本家と同じ保存形式 (前後を改行で囲む)。空なら NULL。
+        const val = clean.length ? '\n' + clean.join('\n') + '\n' : null;
+        db.prepare('UPDATE metadata SET tags = ? WHERE hash = ?').run(val, row.hash);
+        res.json({ success: true, tags: clean });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
 
 // GET /ext/api/tags  タグごとに { name, count, thumbId, hasThumb }
 exports.list = (req, res) => {

@@ -244,6 +244,49 @@
         document.body.appendChild(btn);
     }
 
+    /* ---------- タグ編集 (本家のタグ編集を ext のグループ対応ダイアログで統一) ---------- */
+    // 本家のタグ編集FAB(右下 bottom:2rem の単色ボタン)を隠し、ext のFABに置き換える。
+    function hideNativeTagFab() {
+        document.querySelectorAll('button').forEach(b => {
+            if (b.className && String(b.className).indexOf('wlext') >= 0) return;
+            const cs = getComputedStyle(b);
+            if (cs.position !== 'fixed') return;
+            const right = parseFloat(cs.right), bottom = parseFloat(cs.bottom);
+            if (Math.abs(right - 32) <= 8 && Math.abs(bottom - 32) <= 8) {
+                b.style.display = 'none';
+                b.setAttribute('data-wlext-tagfab-hidden', '1');
+            }
+        });
+    }
+    function ensureTagFab(vid) {
+        hideNativeTagFab();
+        if (document.querySelector('.wlext-tag-fab')) return;
+        const btn = h('button', {
+            class: 'wlext-tag-fab',
+            title: 'タグを編集',
+            html: WL.iconSvg('tag', 22),
+            onClick: () => openTagEditor(vid)
+        });
+        document.body.appendChild(btn);
+    }
+    async function openTagEditor(vid) {
+        let current = [];
+        try { const r = await WL.api.getVideoTags(vid); current = r.tags || []; } catch (e) { }
+        WL.presetTagDialog({
+            title: 'タグを編集',
+            current,
+            loadPresets: () => WL.loadVideoTagPresets(),
+            savePresets: (arr) => WL.saveVideoTagPresets(arr),
+            onSave: async (selected) => {
+                try {
+                    await WL.api.setVideoTags(vid, selected);
+                    WL.toast('タグを保存しました', 'success');
+                    setTimeout(() => location.reload(), 350);
+                } catch (e) { WL.toast('タグの保存に失敗: ' + e.message, 'error'); }
+            }
+        });
+    }
+
     async function runDmmSearch(vid) {
         const meta = WL._meta[vid];
         if (meta && !meta.model_no) { WL.toast('品番が設定されていません。先に品番を登録してください。', 'error'); return; }
@@ -319,6 +362,7 @@
         const vid = WL.matchWatch();
         if (!vid) return;
         ensureSearchFab(vid);
+        ensureTagFab(vid);
         const meta = getMeta(vid);
         if (!meta) return;
 
@@ -345,8 +389,8 @@
     WL.onRoute(() => {
         const root = document.getElementById('root');
         if (root) root.querySelectorAll('.wlext-rating-host, .wlext-meta-block').forEach(e => e.remove());
-        // 視聴ページ以外では検索FABを除去
-        if (!WL.matchWatch()) document.querySelectorAll('.wlext-search-fab').forEach(e => e.remove());
+        // 視聴ページ以外では追加FAB(検索/タグ編集)を除去
+        if (!WL.matchWatch()) document.querySelectorAll('.wlext-search-fab, .wlext-tag-fab').forEach(e => e.remove());
         const vid = WL.matchWatch();
         if (vid) { delete WL._meta[vid]; }
     });

@@ -53,7 +53,7 @@
         // ---- コントロール ----
         const controls = h('div', { class: 'wlext-plist-controls' });
         const sortDefs = [
-            ['rating', '評価'], ['furigana', 'ふりがな'], ['height', '身長'], ['weight', '体重'],
+            ['rating', '評価'], ['videoCount', '出演数'], ['furigana', 'ふりがな'], ['height', '身長'], ['weight', '体重'],
             ['bust', 'バスト'], ['cup', 'カップ数'], ['waist', 'ウェスト'], ['hip', 'ヒップ'], ['age', '年齢']
         ];
         const sortRow = h('div', { class: 'wlext-plist-sortrow' });
@@ -62,7 +62,7 @@
         sortDefs.forEach(([key, label]) => {
             const btn = h('div', { class: 'wlext-plist-sortbtn', onClick: () => {
                 if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-                else { state.sort = key; state.dir = (key === 'rating' || key === 'age') ? 'desc' : 'asc'; }
+                else { state.sort = key; state.dir = (key === 'rating' || key === 'age' || key === 'videoCount') ? 'desc' : 'asc'; }
                 paintSort(); renderGrid();
             } }, label);
             sortBtns[key] = btn;
@@ -130,6 +130,7 @@
         function sortVal(p) {
             switch (state.sort) {
                 case 'rating': return p.rating || 0;
+                case 'videoCount': return p.videoCount || 0;
                 case 'furigana': return p.furigana || p.name || '';
                 case 'height': return numOrNull(p.height);
                 case 'weight': return numOrNull(p.weight);
@@ -167,10 +168,12 @@
             const imgHost = h('div', { class: 'wlext-plist-img' });
             if (p.has_image) {
                 const im = h('img', { alt: p.name, loading: 'lazy' });
-                im.onerror = () => { imgHost.textContent = '👤'; };
+                im.onerror = () => { im.remove(); imgHost.appendChild(document.createTextNode('👤')); };
                 im.src = WL.api.performerImageUrl(p.id);
                 imgHost.appendChild(im);
-            } else { imgHost.textContent = '👤'; }
+            } else { imgHost.appendChild(document.createTextNode('👤')); }
+            // 関連動画数バッジ (画像右上, シリーズ一覧と同形式)
+            imgHost.appendChild(h('div', { class: 'wlext-series-count', title: (p.videoCount || 0) + '本' }, String(p.videoCount || 0)));
 
             const small = h('div', { class: 'wlext-plist-stars' }, WL.starsEl(p.rating || 0)); // 読み取り専用
 

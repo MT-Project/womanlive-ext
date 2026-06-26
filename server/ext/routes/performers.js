@@ -105,11 +105,23 @@ exports.all = (req, res) => {
         const dupIds = new Set();
         idMap.forEach(set => { if (set.size > 1) set.forEach(id => dupIds.add(id)); });
 
+        // 関連動画数: ext_video_meta.performers (改行区切りの performer id) を file 単位で集計
+        const countMap = new Map();
+        db.prepare(`
+            SELECT e.performers AS performers
+            FROM files f JOIN ext_video_meta e ON e.hash = f.hash
+            WHERE e.performers IS NOT NULL AND e.performers != ''
+        `).all().forEach(r => splitList(r.performers).forEach(pid => {
+            const n = parseInt(pid, 10);
+            if (!isNaN(n)) countMap.set(n, (countMap.get(n) || 0) + 1);
+        }));
+
         const out = rows.map(r => ({
             id: r.id, name: r.name || '', furigana: r.furigana || '', birthday: r.birthday || '',
             height: r.height || '', weight: r.weight || '', bust: r.bust || '', cup: r.cup || '',
             waist: r.waist || '', hip: r.hip || '', blood_type: r.blood_type || '', rating: r.rating || 0,
-            tags: splitList(r.tags), has_image: !!r.has_image, dup: dupIds.has(r.id)
+            tags: splitList(r.tags), has_image: !!r.has_image, dup: dupIds.has(r.id),
+            videoCount: countMap.get(r.id) || 0
         }));
         res.json(out);
     } catch (e) {
@@ -160,7 +172,12 @@ exports.get = (req, res) => {
     try {
         const row = db.prepare('SELECT *, (image IS NOT NULL) AS has_image FROM ext_performers WHERE id = ?').get(req.params.id);
         if (!row) return res.status(404).json({ error: 'performer not found' });
-        res.json(rowToPerformer(row));
+        const cnt = db.prepare(`
+            SELECT COUNT(*) AS c
+            FROM files f JOIN ext_video_meta e ON e.hash = f.hash
+            WHERE ('\n' || IFNULL(e.performers,'') || '\n') LIKE ?
+        `).get('%\n' + parseInt(req.params.id, 10) + '\n%').c;
+        res.json(Object.assign(rowToPerformer(row), { video_count: cnt }));
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

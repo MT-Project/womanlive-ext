@@ -126,8 +126,9 @@
         WL.presetTagDialog({
             title: 'タグを追加（' + ids.length + '件）',
             current: [],
-            loadPresets: () => WL.api.getVideoPresetTags(),
-            savePresets: (arr) => WL.api.saveVideoPresetTags(arr),
+            // グループ対応の動画タグプリセット (動画単体ページと共用)
+            loadPresets: () => WL.loadVideoTagPresets(),
+            savePresets: (arr) => WL.saveVideoTagPresets(arr),
             onSave: async (tags) => {
                 if (!tags.length) { WL.toast('追加するタグを選んでください', 'error'); return; }
                 try { const r = await WL.api.bulkTags(ids, tags); WL.toast(r.count + '件にタグを追加しました', 'success'); afterAction(); }

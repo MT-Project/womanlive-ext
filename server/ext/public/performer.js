@@ -231,7 +231,7 @@
         renderInfo();
 
         // ---- 関連動画 ----
-        container.appendChild(h('div', { class: 'wlext-pp-section-title' }, '関連動画'));
+        container.appendChild(h('div', { class: 'wlext-pp-section-title' }, '関連動画（' + (perf.video_count || 0) + '）'));
         const vidGrid = h('div', { class: 'wlext-video-grid' }, h('div', { style: { color: 'var(--text-secondary,#888)' } }, '読み込み中...'));
         container.appendChild(vidGrid);
         WL.api.performerVideos(id).then(videos => {

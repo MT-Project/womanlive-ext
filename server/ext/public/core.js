@@ -102,6 +102,14 @@
     }
     WL.applyDisplayName = applyDisplayName;
 
+    // 検索結果の全タグ(m.tags)を id でキャッシュ (リスト表示のタグ幅フィットで参照)
+    WL._videoTags = WL._videoTags || {};
+    function cacheVideoTags(list) {
+        if (!Array.isArray(list)) return;
+        list.forEach(v => { if (v && v.id != null && v.tags != null) WL._videoTags[v.id] = v.tags; });
+    }
+    WL.cacheVideoTags = cacheVideoTags;
+
     async function handleVideosFetch(url, input, init) {
         const u = new URL(url, location.origin);
         const q = (u.searchParams.get('q') || '').trim();
@@ -116,6 +124,7 @@
             if (r.ok) {
                 const data = await r.json();
                 applyDisplayName(data.videos);
+                cacheVideoTags(data.videos);
                 return jsonResponse(data);
             }
         } catch (e) { /* フォールバックへ */ }
@@ -132,6 +141,7 @@
                     data.videos.forEach(v => { const m = map[v.id]; if (m) { if (m.display_name) v.ext_display_name = m.display_name; v.ext_rating = m.rating; } });
                 } catch (e) { }
                 applyDisplayName(data.videos);
+                cacheVideoTags(data.videos);
             }
             return jsonResponse(data);
         } catch (e) { return clone; }
@@ -425,32 +435,118 @@
         return close;
     };
 
+    /* ---------- タグのグループ化 (プリセット一覧の # 見出し) ---------- */
+    // "# 名前" でグループ、"## 名前" でその下位(ネスト)。見出しの間のタグがそのグループに属する。
+    function parseTagGroups(list) {
+        const root = { name: null, level: 0, path: '', tags: [], children: [] };
+        const stack = [root];
+        (list || []).forEach(raw => {
+            const line = String(raw == null ? '' : raw).trim();
+            if (!line) return;
+            const m = /^([#＃]+)\s*(.*)$/.exec(line);   // 半角# / 全角＃ どちらも見出しとして扱う
+            if (m && m[2]) {
+                const level = m[1].length;
+                while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+                const parent = stack[stack.length - 1];
+                const node = { name: m[2].trim(), level, path: parent.path + '' + m[2].trim(), tags: [], children: [] };
+                parent.children.push(node);
+                stack.push(node);
+            } else {
+                stack[stack.length - 1].tags.push(line);
+            }
+        });
+        return root;
+    }
+    WL.parseTagGroups = parseTagGroups;
+
+    // 本家プリセット(実タグ)と ext のグループレイアウト(# 入り)を突き合わせる。
+    // 本家で増えたタグはデフォルトグループ(先頭の # より前)へ、消えたタグはレイアウトから除外。
+    WL.reconcileTagLayout = function (layout, nativeTags) {
+        const isHdr = s => /^[#＃]/.test(String(s == null ? '' : s).trim());
+        layout = Array.isArray(layout) ? layout.slice() : [];
+        // 本家プリセットに紛れ込んだ見出し(#)は無視する(グループは ext レイアウト側で定義)
+        nativeTags = Array.isArray(nativeTags) ? nativeTags.map(s => String(s).trim()).filter(Boolean).filter(t => !isHdr(t)) : [];
+        const nativeSet = new Set(nativeTags);
+        const realSet = new Set(layout.filter(l => !isHdr(l)).map(s => String(s).trim()));
+        const kept = layout.filter(l => isHdr(l) || nativeSet.has(String(l).trim()));
+        const missing = nativeTags.filter(t => !realSet.has(t));
+        if (!missing.length) return kept;
+        const firstHdr = kept.findIndex(isHdr);
+        if (firstHdr === -1) return [...kept, ...missing];
+        return [...kept.slice(0, firstHdr), ...missing, ...kept.slice(firstHdr)];
+    };
+
+    // 動画タグ プリセット(グループ対応) の読み書き。動画単体ページ・一括追加で共用。
+    // グループ定義(# 入り)は ext に保持し、本家プリセットには実タグのみを同期する。
+    WL.loadVideoTagPresets = async function () {
+        const [native, layout] = await Promise.all([
+            WL.api.getVideoPresetTags(),
+            WL.api.getVideoTagLayout().catch(() => [])
+        ]);
+        return WL.reconcileTagLayout(layout, native);
+    };
+    WL.saveVideoTagPresets = async function (arr) {
+        await WL.api.saveVideoTagLayout(arr);
+        await WL.api.saveVideoPresetTags(arr.filter(t => !/^[#＃]/.test(String(t).trim())));
+    };
+
     /* ---------- プリセットタグ選択ダイアログ (動画タグと同じ操作感) ---------- */
     // opts: { title, current[], loadPresets()->Promise<string[]>, savePresets(arr)->Promise, onSave(selected[])->Promise }
     WL.presetTagDialog = function (opts) {
         let selected = (opts.current || []).slice();
         let presets = [];
         let editMode = false;
+        const collapsed = {}; // path -> true(折りたたみ中)
 
         const chipsHost = h('div', { class: 'wlext-tagselect' });
-        const textarea = h('textarea', { class: 'wlext-textarea', style: { minHeight: '200px', display: 'none' }, placeholder: 'タグを1行に1つずつ入力...' });
+        const textarea = h('textarea', {
+            class: 'wlext-textarea', style: { minHeight: '220px', display: 'none' },
+            placeholder: 'タグを1行に1つずつ入力...\n「# 名前」でグループ、「## 名前」で下位グループ(ネスト)。\n例:\n# 干支\n犬\n猿\n# 魚\nマグロ'
+        });
 
+        function tagChip(name) {
+            const el = h('div', { class: 'wlext-tagselect-item' + (selected.includes(name) ? ' on' : '') }, name);
+            el.addEventListener('click', () => {
+                if (selected.includes(name)) { selected = selected.filter(t => t !== name); el.classList.remove('on'); }
+                else { selected.push(name); el.classList.add('on'); }
+            });
+            return el;
+        }
+        function chipRow(tags) {
+            const row = h('div', { class: 'wlext-tagselect-row' });
+            tags.forEach(t => row.appendChild(tagChip(t)));
+            return row;
+        }
+        function renderGroup(node) {
+            const isCol = !!collapsed[node.path];
+            const header = h('div', { class: 'wlext-taggroup-header' }, [
+                h('span', { class: 'wlext-taggroup-name' }, node.name),
+                h('span', { class: 'wlext-taggroup-tri' }, isCol ? '▶' : '▼')
+            ]);
+            header.addEventListener('click', () => { collapsed[node.path] = !isCol; renderChips(); });
+            const wrap = h('div', { class: 'wlext-taggroup' }, header);
+            if (!isCol) {
+                const inner = h('div', { class: 'wlext-taggroup-body' });
+                if (node.tags.length) inner.appendChild(chipRow(node.tags));
+                node.children.forEach(c => inner.appendChild(renderGroup(c)));
+                wrap.appendChild(inner);
+            }
+            return wrap;
+        }
         function renderChips() {
             chipsHost.innerHTML = '';
-            const all = [];
-            const seen = new Set();
-            [...presets, ...selected].forEach(t => { if (!seen.has(t)) { seen.add(t); all.push(t); } });
-            if (!all.length) {
+            const tree = parseTagGroups(presets);
+            // プリセットに無い選択中タグはデフォルトグループへ
+            const presetSet = new Set();
+            (function walk(n) { n.tags.forEach(t => presetSet.add(t)); n.children.forEach(walk); })(tree);
+            selected.forEach(t => { if (!presetSet.has(t)) { tree.tags.push(t); presetSet.add(t); } });
+            tree.tags = [...new Set(tree.tags)];
+            if (!presetSet.size) {
                 chipsHost.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)', fontSize: '0.85rem' } }, 'プリセットタグがありません。「タグ編集...」で追加してください。'));
                 return;
             }
-            all.forEach(name => {
-                const on = selected.includes(name);
-                chipsHost.appendChild(h('div', {
-                    class: 'wlext-tagselect-item' + (on ? ' on' : ''),
-                    onClick: () => { if (selected.includes(name)) selected = selected.filter(t => t !== name); else selected.push(name); renderChips(); }
-                }, name));
-            });
+            if (tree.tags.length) chipsHost.appendChild(chipRow(tree.tags));
+            tree.children.forEach(g => chipsHost.appendChild(renderGroup(g)));
         }
 
         Promise.resolve(opts.loadPresets()).then(p => { presets = Array.isArray(p) ? p : []; renderChips(); }).catch(() => renderChips());

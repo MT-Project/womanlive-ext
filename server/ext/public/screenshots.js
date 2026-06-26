@@ -11,8 +11,10 @@
     WL._ssCount = WL._ssCount || {}; // id(number) -> 枚数(number)
     let pending = false;
 
-    // 検索カード内のフォルダ名要素 (bookmark.js と同じ判定)
+    // 検索カード内のフォルダ名要素 (bookmark.js と同じ判定。folderName クラスを優先)
     function findFolderName(card) {
+        const fav = card.querySelector('.fywxlxv');
+        if (fav) return fav;
         const divs = card.querySelectorAll('div');
         for (const d of divs) {
             const s = getComputedStyle(d);
