@@ -552,6 +552,18 @@
 }
 .wlext-ss-card img { width: 100%; height: 100%; object-fit: contain; }
 
+/* タグサムネ用 スクリーンショット選択ピッカー (3列) */
+.wlext-ss-pick-grid { grid-template-columns: repeat(3, 1fr); }
+.wlext-ss-pick-card { transition: outline-color 0.1s; }
+.wlext-ss-pick-card.wlext-ss-sel { outline: 3px solid var(--accent, #007acc); outline-offset: -3px; }
+.wlext-ss-pick-card.wlext-ss-sel::after {
+    content: '✓'; position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent, #007acc); color: #fff; font-size: 13px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.wlext-ss-pick-msg { grid-column: 1 / -1; color: var(--text-secondary, #888); font-size: 0.85rem; padding: 1.2rem 0.2rem; text-align: center; }
+
 /* ---- 設定ページ用 拡張セクション ---- */
 .wlext-settings-section {
     margin: 1.5rem 0; padding: 1.2rem;
@@ -839,6 +851,8 @@
     border: 1px solid var(--border-primary, #ccc); border-radius: 0.5rem;
     box-shadow: 0 12px 30px rgba(0,0,0,0.3); overflow: hidden; min-width: 190px;
 }
+/* アンカー配置 (リスト「⋮」から開く動画単体メニュー): bottom/right を解除し top/left で配置 */
+.wlext-sel-menu-anchored { bottom: auto; right: auto; min-width: 170px; }
 .wlext-sel-menu-head {
     padding: 0.55rem 0.9rem; font-size: 0.78rem; color: var(--text-secondary, #888);
     border-bottom: 1px solid var(--border-primary, #eee);

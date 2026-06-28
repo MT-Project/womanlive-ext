@@ -51,6 +51,8 @@
         tagThumbUrl: (name, bust) => '/ext/api/tag/thumb?name=' + encodeURIComponent(name) + (bust ? ('&t=' + bust) : ''),
         setTagThumb: (name, dataUrl) => req('/ext/api/tag/thumb', jsonOpts('POST', { name, image: dataUrl })),
         deleteTagThumb: (name) => req('/ext/api/tag/thumb?name=' + encodeURIComponent(name), { method: 'DELETE' }),
+        tagScreenshots: (name, limit) => req('/ext/api/tag/screenshots?name=' + encodeURIComponent(name) + (limit ? '&limit=' + limit : '')),
+        setTagThumbFromScreenshot: (name, screenshotId) => req('/ext/api/tag/thumb/from-screenshot', jsonOpts('POST', { name, screenshotId })),
         getPerformerTags: () => req('/ext/api/performer-tags'),
         savePerformerTags: (tags) => req('/ext/api/performer-tags', jsonOpts('PUT', { tags })),
         getTagRules: () => req('/ext/api/performer-tag-rules'),

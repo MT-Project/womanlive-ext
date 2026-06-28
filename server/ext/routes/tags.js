@@ -146,3 +146,82 @@ exports.deleteThumb = (req, res) => {
         res.status(500).json({ error: e.message });
     }
 };
+
+// 指定タグが付いた動画の hash 一覧を集める (タグ名は大文字小文字を区別しない)
+function hashesForTag(name) {
+    const key = name.toLowerCase();
+    const rows = db.prepare(`
+        SELECT f.hash AS hash, m.tags AS tags
+        FROM files f
+        JOIN metadata m ON m.hash = f.hash
+        WHERE m.tags IS NOT NULL AND m.tags != ''
+    `).all();
+    const hashes = [];
+    const seen = new Set();
+    for (const r of rows) {
+        if (seen.has(r.hash)) continue;
+        if (splitList(r.tags).some(t => t.toLowerCase() === key)) { hashes.push(r.hash); seen.add(r.hash); }
+    }
+    return hashes;
+}
+
+// GET /ext/api/tag/screenshots?name=...&limit=9
+// 当該タグが付いた動画のスクリーンショットからランダムに最大 limit 枚返す。
+exports.screenshots = (req, res) => {
+    try {
+        const name = (req.query.name || '').trim();
+        if (!name) return res.status(400).json({ error: 'name required' });
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 9, 1), 30);
+
+        let hashes = hashesForTag(name);
+        if (!hashes.length) return res.json([]);
+        // SQLite のプレースホルダ上限を超えないようにランダムサンプリング
+        if (hashes.length > 800) {
+            for (let i = hashes.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[hashes[i], hashes[j]] = [hashes[j], hashes[i]]; }
+            hashes = hashes.slice(0, 800);
+        }
+        const ph = hashes.map(() => '?').join(',');
+        const shots = db.prepare(`
+            SELECT s.id, s.timestamp, MIN(f.id) AS video_id
+            FROM screenshots s
+            JOIN files f ON f.hash = s.hash
+            WHERE s.hash IN (${ph})
+            GROUP BY s.id
+            ORDER BY RANDOM()
+            LIMIT ?
+        `).all(...hashes, limit);
+        res.json(shots);
+    } catch (e) {
+        console.error('[ext tag screenshots]', e);
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// POST /ext/api/tag/thumb/from-screenshot  {name, screenshotId}
+// スクリーンショット画像をタグのカスタムサムネイルとして保存する。
+exports.setThumbFromScreenshot = async (req, res) => {
+    try {
+        const b = req.body || {};
+        const name = (b.name || '').trim();
+        const sid = parseInt(b.screenshotId, 10);
+        if (!name) return res.status(400).json({ error: 'name required' });
+        if (!Number.isInteger(sid)) return res.status(400).json({ error: 'screenshotId required' });
+
+        const shot = db.prepare('SELECT image_data FROM screenshots WHERE id = ?').get(sid);
+        if (!shot || !shot.image_data) return res.status(404).json({ error: 'スクリーンショットが見つかりません' });
+
+        let buf = shot.image_data;
+        if (sharp) {
+            try {
+                buf = await sharp(buf).resize(THUMB_W, THUMB_H, { fit: 'cover' }).webp({ quality: 85 }).toBuffer();
+            } catch (err) {
+                console.warn('[ext] タグ画像変換に失敗、元データを保存します:', err.message);
+            }
+        }
+        db.prepare('INSERT OR REPLACE INTO ext_tag_thumb (name, image, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)').run(name, buf);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[ext tag thumb from screenshot]', e);
+        res.status(500).json({ error: e.message });
+    }
+};

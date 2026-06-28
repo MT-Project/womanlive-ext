@@ -67,6 +67,21 @@
         const id = cardId(card); if (id != null) toggleSelect(id);
     }, true);
 
+    // リスト表示の「⋮」(本家タグ付けメニュー .ly42xzs) を、動画単体の操作メニューに差し替える。
+    // 本家の onClick(タグメニュー開閉)へ届く前にキャプチャ段階で横取りする。
+    document.addEventListener('click', (e) => {
+        if (selectionMode) return;
+        const t = e.target;
+        const wrapper = t && t.closest ? t.closest('.ly42xzs') : null;  // listMenuBtnWrapper
+        if (!wrapper) return;
+        const card = wrapper.closest('a[href^="/watch/"]');
+        const root = document.getElementById('root');
+        if (!card || !root || !root.contains(card)) return;
+        const id = cardId(card); if (id == null) return;
+        e.preventDefault(); e.stopPropagation();
+        openVideoMenu(id, wrapper.querySelector('.mbok9eh') || wrapper);
+    }, true);
+
     /* ---------- FAB ---------- */
     let fabs = null, btnMenu, btnAll, btnNone, btnMode;
     function svg(p, fill) {
@@ -114,6 +129,28 @@
         ]);
         document.body.appendChild(menuBackdrop);
         document.body.appendChild(menuEl);
+    }
+
+    // 動画単体の操作メニュー (リスト表示の「⋮」から開く・ボタン近くにアンカー)
+    function openVideoMenu(id, anchor) {
+        closeMenu();
+        menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
+        menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, [
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags([id]); } }, '🏷 タグ追加'),
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta([id]); } }, '✎ 詳細情報編集'),
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doBookmark([id]); } }, '🔖 ブックマーク追加'),
+            h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete([id]); } }, '🗑 動画の削除'),
+        ]);
+        document.body.appendChild(menuBackdrop);
+        document.body.appendChild(menuEl);
+        // アンカー(ボタン)直下に配置。画面外なら上側へ反転。
+        const r = anchor.getBoundingClientRect();
+        const mw = menuEl.offsetWidth, mh = menuEl.offsetHeight;
+        let left = r.right - mw; if (left < 8) left = 8;
+        let top = r.bottom + 6;
+        if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+        menuEl.style.left = left + 'px';
+        menuEl.style.top = top + 'px';
     }
 
     function afterAction(refresh) {

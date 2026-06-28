@@ -124,16 +124,83 @@
                 document.body.appendChild(input); input.click(); setTimeout(() => input.remove(), 1000);
             }
 
+            async function resetToDefault() {
+                try { await WL.api.deleteTagThumb(tag.name); tag.hasThumb = false; paintThumb(); WL.toast('既定のサムネイルに戻しました', 'success'); }
+                catch (e) { WL.toast('リセットに失敗: ' + e.message, 'error'); }
+            }
+
+            // スクリーンショットから選ぶピッカー (下部に 決定 / 他の画像へ更新 / ローカルから選択)
             function startEdit() {
+                let selectedId = null;
+                const overlay = h('div', { class: 'wlext-overlay', onClick: (e) => { if (e.target === overlay) close(); } });
+                function close() { overlay.remove(); document.removeEventListener('keydown', onKey); }
+                function onKey(e) { if (e.key === 'Escape') close(); }
+
+                const grid = h('div', { class: 'wlext-ss-grid wlext-ss-pick-grid' });
+                const decideBtn = h('button', { class: 'wlext-btn wlext-btn-primary', onClick: onDecide }, '決定');
+                decideBtn.disabled = true;
+                const shuffleBtn = h('button', { class: 'wlext-btn', onClick: () => loadShots() }, '他の画像へ更新');
+                const localBtn = h('button', { class: 'wlext-btn', onClick: () => { close(); pickAndCrop(); } }, 'ローカルから選択');
+
+                const right = h('div', { class: 'wlext-inline' }, [decideBtn, shuffleBtn, localBtn]);
+                const footer = h('div', { class: 'wlext-dialog-footer' });
                 if (tag.hasThumb) {
-                    WL.lightbox(WL.api.tagThumbUrl(tag.name, Date.now()), {
-                        onEdit: () => pickAndCrop(),
-                        onReset: async () => {
-                            try { await WL.api.deleteTagThumb(tag.name); tag.hasThumb = false; paintThumb(); WL.toast('既定のサムネイルに戻しました', 'success'); }
-                            catch (e) { WL.toast('リセットに失敗: ' + e.message, 'error'); }
-                        }
+                    footer.appendChild(h('button', {
+                        class: 'wlext-btn', style: { marginRight: 'auto' },
+                        onClick: () => { close(); resetToDefault(); }
+                    }, '既定に戻す'));
+                }
+                footer.appendChild(right);
+
+                const dlg = h('div', { class: 'wlext-dialog' }, [
+                    h('div', { class: 'wlext-dialog-header' }, [h('span', null, 'サムネイルを編集 — ' + tag.name), h('span', { class: 'wlext-close-x', onClick: close }, '✕')]),
+                    h('div', { class: 'wlext-dialog-body' }, grid),
+                    footer
+                ]);
+                overlay.appendChild(dlg);
+                document.addEventListener('keydown', onKey);
+                document.body.appendChild(overlay);
+
+                function setSelected(card, id) {
+                    grid.querySelectorAll('.wlext-ss-pick-card').forEach(c => c.classList.remove('wlext-ss-sel'));
+                    card.classList.add('wlext-ss-sel');
+                    selectedId = id; decideBtn.disabled = false;
+                }
+
+                async function loadShots() {
+                    selectedId = null; decideBtn.disabled = true;
+                    grid.innerHTML = '';
+                    grid.appendChild(h('div', { class: 'wlext-ss-pick-msg' }, '読み込み中...'));
+                    let shots;
+                    try { shots = await WL.api.tagScreenshots(tag.name, 9); }
+                    catch (e) { grid.innerHTML = ''; grid.appendChild(h('div', { class: 'wlext-ss-pick-msg' }, '読み込みに失敗しました: ' + e.message)); return; }
+                    grid.innerHTML = '';
+                    if (!shots.length) {
+                        grid.appendChild(h('div', { class: 'wlext-ss-pick-msg' }, 'このタグの動画にスクリーンショットがありません。「ローカルから選択」で画像を登録できます。'));
+                        shuffleBtn.disabled = true;
+                        return;
+                    }
+                    shuffleBtn.disabled = false;
+                    shots.forEach(s => {
+                        const card = h('div', { class: 'wlext-ss-card wlext-ss-pick-card' },
+                            h('img', { src: '/api/screenshot/' + s.id + '/image', loading: 'lazy' }));
+                        card.addEventListener('click', () => setSelected(card, s.id));
+                        grid.appendChild(card);
                     });
-                } else pickAndCrop();
+                }
+
+                async function onDecide() {
+                    if (selectedId == null) return;
+                    decideBtn.disabled = true;
+                    try {
+                        await WL.api.setTagThumbFromScreenshot(tag.name, selectedId);
+                        tag.hasThumb = true; paintThumb();
+                        WL.toast('サムネイルを登録しました', 'success');
+                        close();
+                    } catch (e) { WL.toast('登録に失敗: ' + e.message, 'error'); decideBtn.disabled = false; }
+                }
+
+                loadShots();
             }
 
             paintThumb();
