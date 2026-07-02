@@ -239,6 +239,24 @@
 .wlext-genre-chip::before { content: "ジャンル: "; opacity: 0.6; }
 .wlext-genre-chip:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
 
+/* ---- スクリーンショット表示サイズ変更 (本家クラス: セクション=smd4qe2 / カード=sh40nas / ラッパー=sm0rvxt / 画像=sva5x5f) ---- */
+.smd4qe2 .sh40nas, .smd4qe2 .sm0rvxt, .smd4qe2 .sva5x5f, .smd4qe2 .wlext-cover-card {
+    width: var(--wlext-ss-w, 160px) !important;
+    height: var(--wlext-ss-h, 90px) !important;
+}
+.wlext-ss-resize {
+    position: absolute; top: 0; right: 0; z-index: 3;
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    background: var(--bg-secondary, #f3f3f3);
+    border: 1px solid var(--border-primary, #ddd);
+    border-radius: 0.3rem;
+    color: var(--text-secondary, #888);
+}
+.wlext-ss-resize .wlext-ico { flex-shrink: 0; }
+.wlext-ss-resize-input { width: 100px; }
+.wlext-ss-resize-val { font-size: 0.72rem; min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+
 /* ---- 動画情報検索 FAB (品番でFANZA検索) ---- */
 .wlext-search-fab {
     position: fixed;
@@ -587,6 +605,13 @@
 .wlext-related-field input { width: 84px; flex: 0 0 auto; }
 @media (max-width: 520px) { .wlext-related-grid { grid-template-columns: 1fr; } }
 
+/* ---- カード類の <a> 化 (中クリック/Ctrl+クリック対応) によるリンク既定装飾の打ち消し ---- */
+.wlext-series-card, .wlext-plist-card, .wlext-relcal-month, .wlext-relcal-year-link,
+.wlext-video-thumb, .wlext-series-name {
+    text-decoration: none;
+    color: inherit;
+}
+
 /* =============================================================
    拡張ページ共通シェル (公開カレンダー / 出演者一覧)
    ============================================================= */
@@ -857,8 +882,10 @@
     padding: 0.55rem 0.9rem; font-size: 0.78rem; color: var(--text-secondary, #888);
     border-bottom: 1px solid var(--border-primary, #eee);
 }
-.wlext-sel-menu-item { padding: 0.7rem 0.95rem; cursor: pointer; font-size: 0.9rem; }
+.wlext-sel-menu-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.95rem; cursor: pointer; font-size: 0.9rem; }
 .wlext-sel-menu-item:hover { background: var(--bg-hover, #eee); }
+.wlext-sel-menu-item .wlext-ico { flex-shrink: 0; color: var(--text-secondary, #888); }
+.wlext-sel-menu-item:hover .wlext-ico { color: var(--accent, #007acc); }
 .wlext-sel-menu-item.danger { color: var(--status-error, #e51400); border-top: 1px solid var(--border-primary, #eee); }
 .wlext-sel-menu-item.danger:hover { background: rgba(229,20,0,0.1); }
 

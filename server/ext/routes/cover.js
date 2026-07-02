@@ -3,12 +3,8 @@
 // =============================================================
 const fs = require('fs');
 const path = require('path');
-const { db, getSetting, setSetting } = require('../db');
+const { db, getSetting, setSetting, imageContentType, IMG_EXTS, sharp } = require('../db');
 
-let sharp = null;
-try { sharp = require('sharp'); } catch (e) { /* 変換なしでも動作 */ }
-
-const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif'];
 const MIME = {
     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
     '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.avif': 'image/avif'
@@ -84,8 +80,7 @@ exports.getCover = (req, res) => {
         const dbCover = db.prepare('SELECT image FROM ext_video_cover WHERE hash = ?').get(row.hash);
         if (dbCover && dbCover.image) {
             const buf = dbCover.image;
-            const isPng = buf[0] === 0x89, isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
-            res.set('Content-Type', isPng ? 'image/png' : (isJpeg ? 'image/jpeg' : 'image/webp'));
+            res.set('Content-Type', imageContentType(buf));
             res.set('Cache-Control', 'no-cache');
             return res.send(buf);
         }

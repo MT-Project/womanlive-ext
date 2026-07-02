@@ -1,7 +1,7 @@
 // =============================================================
 // 出演者 ルート
 // =============================================================
-const { db, splitList, joinList, getSetting, setSetting } = require('../db');
+const { db, splitList, joinList, getSetting, setSetting, imageContentType, sharp } = require('../db');
 
 const PERFORMER_TAGS_KEY = 'ext_performer_preset_tags';
 
@@ -23,9 +23,6 @@ exports.setPresetTags = (req, res) => {
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
-
-let sharp = null;
-try { sharp = require('sharp'); } catch (e) { console.warn('[ext] sharp 未読込: 画像はそのまま保存します'); }
 
 // 一覧の動画 SELECT (VideoList が必要とするフィールドを揃える)
 const VIDEO_FIELDS = `
@@ -237,9 +234,7 @@ exports.getImage = (req, res) => {
         const row = db.prepare('SELECT image FROM ext_performers WHERE id = ?').get(req.params.id);
         if (!row || !row.image) return res.status(404).end();
         const buf = row.image;
-        const isPng = buf[0] === 0x89;
-        const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
-        res.set('Content-Type', isPng ? 'image/png' : (isJpeg ? 'image/jpeg' : 'image/webp'));
+        res.set('Content-Type', imageContentType(buf));
         res.set('Cache-Control', 'no-cache');
         res.send(buf);
     } catch (e) {

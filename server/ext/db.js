@@ -121,4 +121,35 @@ function hashOfVideo(id) {
     return row ? row.hash : null;
 }
 
-module.exports = { db, initSchema, splitList, joinList, getSetting, setSetting, hashOfVideo };
+// 画像バッファ先頭のマジックバイトから Content-Type を判定 (PNG/JPEG 以外は webp とみなす)
+function imageContentType(buf) {
+    if (buf[0] === 0x89) return 'image/png';
+    if (buf[0] === 0xFF && buf[1] === 0xD8) return 'image/jpeg';
+    return 'image/webp';
+}
+
+// カバー/サムネとして扱う画像拡張子 (フォルダ内の同名画像探索・削除で共用)
+const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif'];
+
+// 検索ソートキー -> SQL ORDER BY 句 (拡張検索 search.js / 全文検索 fullsearch.js で共用)
+const SORT_MAP = {
+    'updated_desc': 'f.updated_at DESC',
+    'updated_asc': 'f.updated_at ASC',
+    'name_asc': 'ext_namekey(f.filename) ASC',
+    'duration_desc': 'm.duration DESC',
+    'created_desc': 'm.created_at DESC',
+    'history_desc': 'm.last_played_at DESC',
+    'play_count_desc': 'm.play_count DESC',
+    'ext_rating_desc': 'IFNULL(e.rating,0) DESC, f.updated_at DESC',
+    'ext_rating_asc': 'IFNULL(e.rating,0) ASC, f.updated_at DESC',
+    'ext_screenshots_desc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) DESC, f.updated_at DESC',
+    'ext_screenshots_asc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) ASC, f.updated_at DESC',
+    'ext_displayname_asc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) ASC",
+    'ext_displayname_desc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) DESC",
+};
+
+// 画像変換用 sharp (未インストールでも動作: null のときは変換をスキップ)
+let sharp = null;
+try { sharp = require('sharp'); } catch (e) { /* 変換なしでも動作 */ }
+
+module.exports = { db, initSchema, splitList, joinList, getSetting, setSetting, hashOfVideo, imageContentType, IMG_EXTS, SORT_MAP, sharp };

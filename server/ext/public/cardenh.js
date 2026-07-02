@@ -20,7 +20,7 @@
             const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
             // グリッド表示 .gdn66kd / リスト表示 .l1wadlm1 どちらのサムネ枠も対象にする
             const thumb = card.querySelector('.gdn66kd, .l1wadlm1');
-            const folderEl = card.querySelector('.fywxlxv');  // folderName (grid/list 共通)
+            const folderEl = WL.findFolderName(card);  // folderName (grid/list 共通)
             if (!thumb || !folderEl) return;
             // 折りたたみバッジ(フォルダ名/メーカー)が枠内に収まるよう、サムネ枠を相対配置に
             if (getComputedStyle(thumb).position === 'static') thumb.style.position = 'relative';

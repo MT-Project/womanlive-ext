@@ -34,28 +34,8 @@
 
         // ---- 並び替え ----
         const controls = h('div', { class: 'wlext-plist-controls' });
-        const sortRow = h('div', { class: 'wlext-plist-sortrow' });
-        sortRow.appendChild(h('span', { class: 'wlext-plist-ctl-label' }, '並び替え:'));
-        const sortDefs = [['name', 'シリーズ名'], ['count', '動画本数'], ['rating', '評価']];
-        const btns = {};
-        sortDefs.forEach(([key, label]) => {
-            const b = h('div', {
-                class: 'wlext-plist-sortbtn', onClick: () => {
-                    if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-                    else { state.sort = key; state.dir = (key === 'name') ? 'asc' : 'desc'; }
-                    paint(); renderGrid();
-                }
-            }, label);
-            btns[key] = b; sortRow.appendChild(b);
-        });
-        function paint() {
-            sortDefs.forEach(([key, label]) => {
-                const b = btns[key]; const a = state.sort === key;
-                b.classList.toggle('active', a);
-                b.textContent = label + (a ? (state.dir === 'asc' ? ' ↑' : ' ↓') : '');
-            });
-        }
-        controls.appendChild(sortRow);
+        const sorter = WL.sortRow([['name', 'シリーズ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']], state, renderGrid);
+        controls.appendChild(sorter.el);
         container.appendChild(controls);
 
         const grid = h('div', { class: 'wlext-series-grid' });
@@ -97,13 +77,11 @@
                 ratingEl.appendChild(h('span', { style: { color: 'var(--text-secondary,#888)', fontSize: '0.75rem' } }, '評価なし'));
             }
 
-            return h('div', {
-                class: 'wlext-series-card', title: '「' + s.name + '」で検索',
-                onClick: () => WL.searchBy('@series:"' + s.name + '"')
-            }, [thumb, nameEl, ratingEl]);
+            const url = '/search?q=' + encodeURIComponent('@series:"' + s.name + '"');
+            return WL.navA(url, { class: 'wlext-series-card', title: '「' + s.name + '」で検索' }, [thumb, nameEl, ratingEl]);
         }
 
-        paint();
+        sorter.paint();
         renderGrid();
     }
 

@@ -4,9 +4,7 @@
 // =============================================================
 const fs = require('fs');
 const path = require('path');
-const { db, splitList, joinList, getSetting } = require('../db');
-
-const COVER_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif'];
+const { db, splitList, joinList, getSetting, IMG_EXTS } = require('../db');
 
 // 選択 id 群を hash 単位(重複排除)で処理するためのヘルパ
 function eachHash(ids, fn) {
@@ -133,7 +131,7 @@ exports.delete = (req, res) => {
             if (!coverFolder) return;
             const base = path.parse(filename || path.basename(filePath || '')).name;
             if (!base) return;
-            COVER_EXTS.forEach(ext => { const p = path.join(coverFolder, base + ext); try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { } });
+            IMG_EXTS.forEach(ext => { const p = path.join(coverFolder, base + ext); try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { } });
         }
 
         let deleted = 0, fileErrors = 0;

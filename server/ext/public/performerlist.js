@@ -52,31 +52,11 @@
 
         // ---- コントロール ----
         const controls = h('div', { class: 'wlext-plist-controls' });
-        const sortDefs = [
-            ['rating', '評価'], ['videoCount', '出演数'], ['furigana', 'ふりがな'], ['height', '身長'], ['weight', '体重'],
-            ['bust', 'バスト'], ['cup', 'カップ数'], ['waist', 'ウェスト'], ['hip', 'ヒップ'], ['age', '年齢']
-        ];
-        const sortRow = h('div', { class: 'wlext-plist-sortrow' });
-        sortRow.appendChild(h('span', { class: 'wlext-plist-ctl-label' }, '並び替え:'));
-        const sortBtns = {};
-        sortDefs.forEach(([key, label]) => {
-            const btn = h('div', { class: 'wlext-plist-sortbtn', onClick: () => {
-                if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-                else { state.sort = key; state.dir = (key === 'rating' || key === 'age' || key === 'videoCount') ? 'desc' : 'asc'; }
-                paintSort(); renderGrid();
-            } }, label);
-            sortBtns[key] = btn;
-            sortRow.appendChild(btn);
-        });
-        function paintSort() {
-            sortDefs.forEach(([key, label]) => {
-                const b = sortBtns[key];
-                const active = state.sort === key;
-                b.classList.toggle('active', active);
-                b.textContent = label + (active ? (state.dir === 'asc' ? ' ↑' : ' ↓') : '');
-            });
-        }
-        controls.appendChild(sortRow);
+        const sorter = WL.sortRow([
+            ['rating', '評価', 'desc'], ['videoCount', '出演数', 'desc'], ['furigana', 'ふりがな', 'asc'], ['height', '身長', 'asc'], ['weight', '体重', 'asc'],
+            ['bust', 'バスト', 'asc'], ['cup', 'カップ数', 'asc'], ['waist', 'ウェスト', 'asc'], ['hip', 'ヒップ', 'asc'], ['age', '年齢', 'desc']
+        ], state, renderGrid);
+        controls.appendChild(sorter.el);
 
         // フィルタ行
         const filterRow = h('div', { class: 'wlext-plist-sortrow' });
@@ -180,7 +160,7 @@
             const age = ageLabel(p.birthday);
             const meta = metaLine(p);
 
-            const c = h('div', { class: 'wlext-plist-card' + (p.dup ? ' dup' : ''), title: '出演者ページを開く', onClick: () => WL.openPerformer(p.id) }, [
+            return WL.navA('/performer/' + p.id, { class: 'wlext-plist-card' + (p.dup ? ' dup' : ''), title: '出演者ページを開く' }, [
                 imgHost,
                 h('div', { class: 'wlext-plist-name' }, p.name || '(無名)'),
                 p.furigana ? h('div', { class: 'wlext-plist-furi' }, p.furigana) : null,
@@ -188,7 +168,6 @@
                 age ? h('div', { class: 'wlext-plist-age' }, age) : null,
                 meta ? h('div', { class: 'wlext-plist-stat' }, meta) : null
             ]);
-            return c;
         }
 
         // 現在のソート基準に応じた補助表示
@@ -204,7 +183,7 @@
             }
         }
 
-        paintSort();
+        sorter.paint();
         renderGrid();
     }
 

@@ -19,6 +19,8 @@
         folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
         // ブックマーク追加ボタン(塗り版)から「+」を除いた輪郭アイコン
         bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+        // ブックマークに追加 (動画ページFABと同じ「+」付きアイコン。一括操作メニュー等でも共用)
+        'bookmark-add': '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v3"></path><line x1="16" y1="5" x2="22" y2="5"></line><line x1="19" y1="2" x2="19" y2="8"></line>',
         // 公開カレンダー: 本家「カレンダー」とは別アイコン(チェック付き)
         'calendar-check': '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
         library: '<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
@@ -230,6 +232,40 @@
         });
     }
 
+    /* ---------- 本家カレンダー(/calendar)の中クリック対応 ---------- */
+    // 月/年は <a href> ではない div/h2 のクリックハンドラで遷移するため、そのままでは
+    // 中クリック(新規タブ)が効かない。本体無改変のまま、本体と同じ URL 計算で
+    // auxclick(中クリック)だけをフックして新規タブを開けるようにする。
+    function calendarMonthUrl(year, month) {
+        const lastDay = new Date(new Date(parseInt(year, 10), parseInt(month, 10), 1) - 1).getDate();
+        return '/search?q=' + encodeURIComponent(`>${year}/${month}/01 <${year}/${month}/${lastDay}`);
+    }
+    function calendarYearUrl(year) {
+        return '/search?q=' + encodeURIComponent(`>${year}/01/01 <${year}/12/31`);
+    }
+    function attachMiddleClick(el, urlFn) {
+        el.dataset.wlextMid = '1';
+        el.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
+        el.addEventListener('auxclick', (e) => { if (e.button !== 1) return; e.preventDefault(); window.open(urlFn(), '_blank'); });
+    }
+    function patchCalendarLinks() {
+        if (location.pathname !== '/calendar') return;
+        const root = document.getElementById('root'); if (!root) return;
+        root.querySelectorAll('.y1ulw4s2').forEach(sec => {
+            const yearEl = sec.querySelector('.y14kbhkq');
+            const ym = yearEl && yearEl.textContent.match(/^(\d+)年/);
+            if (!ym) return;
+            const year = ym[1];
+            if (!yearEl.dataset.wlextMid) attachMiddleClick(yearEl, () => calendarYearUrl(year));
+            sec.querySelectorAll('.m9tt3rv').forEach(monthEl => {
+                if (monthEl.dataset.wlextMid) return;
+                const mm = monthEl.textContent.match(/^(\d+)月/);
+                if (!mm) return;
+                attachMiddleClick(monthEl, () => calendarMonthUrl(year, mm[1]));
+            });
+        });
+    }
+
     /* ---------- 拡張ページ共通ヘッダー (本家ヘッダーと同じ構成) ---------- */
     function themeBtn() {
         const b = h('button', { class: 'wlext-action', type: 'button' });
@@ -298,7 +334,7 @@
         });
     }
 
-    WL.onEnsure(() => { patchReactHeader(); patchBrand(); patchSearchHelp(); maybeOpenQR(); });
+    WL.onEnsure(() => { patchReactHeader(); patchBrand(); patchSearchHelp(); maybeOpenQR(); patchCalendarLinks(); });
 
     /* ---------- ページ見出し (アイコン + テキスト) ---------- */
     WL.pageTitle = function (iconName, text) {

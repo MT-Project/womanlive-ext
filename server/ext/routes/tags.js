@@ -7,10 +7,7 @@
 //
 // 動画タグは本体 metadata.tags に改行区切りで保存されている (無改変)。
 // =============================================================
-const { db, splitList, getSetting, setSetting } = require('../db');
-
-let sharp = null;
-try { sharp = require('sharp'); } catch (e) { /* 変換なしでも動作 */ }
+const { db, splitList, getSetting, setSetting, imageContentType, sharp } = require('../db');
 
 // 推奨サムネイル: 16:9 (シリーズ一覧カードと同じ比率)
 const THUMB_W = 640;
@@ -100,8 +97,7 @@ exports.getThumb = (req, res) => {
         const row = db.prepare('SELECT image FROM ext_tag_thumb WHERE name = ?').get(name);
         if (!row || !row.image) return res.status(404).end();
         const buf = row.image;
-        const isPng = buf[0] === 0x89, isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
-        res.set('Content-Type', isPng ? 'image/png' : (isJpeg ? 'image/jpeg' : 'image/webp'));
+        res.set('Content-Type', imageContentType(buf));
         res.set('Cache-Control', 'no-cache');
         res.send(buf);
     } catch (e) {

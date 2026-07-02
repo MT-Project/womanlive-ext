@@ -116,16 +116,22 @@
     let menuEl = null, menuBackdrop = null;
     function closeMenu() { if (menuEl) menuEl.remove(); if (menuBackdrop) menuBackdrop.remove(); menuEl = menuBackdrop = null; }
     function toggleMenu() { if (menuEl) { closeMenu(); return; } openMenu(); }
+    // 一括操作/動画単体で共通のメニュー項目 (対象 ids だけが異なる)
+    function menuItems(ids) {
+        return [
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags(ids); } }, [WL.icon('tag', 15), h('span', null, 'タグ追加')]),
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta(ids); } }, '✎ 詳細情報編集'),
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doBookmark(ids); } }, [WL.icon('bookmark-add', 15), h('span', null, 'ブックマーク追加')]),
+            h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids); } }, '🗑 動画の削除'),
+        ];
+    }
     function openMenu() {
         const ids = [...selected];
         if (!ids.length) return;
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
         menuEl = h('div', { class: 'wlext-sel-menu' }, [
             h('div', { class: 'wlext-sel-menu-head' }, ids.length + '件を一括操作'),
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags(ids); } }, '🏷 タグ追加'),
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta(ids); } }, '✎ 詳細情報編集'),
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doBookmark(ids); } }, '🔖 ブックマーク追加'),
-            h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids); } }, '🗑 動画の削除'),
+            ...menuItems(ids),
         ]);
         document.body.appendChild(menuBackdrop);
         document.body.appendChild(menuEl);
@@ -135,12 +141,7 @@
     function openVideoMenu(id, anchor) {
         closeMenu();
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
-        menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, [
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags([id]); } }, '🏷 タグ追加'),
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta([id]); } }, '✎ 詳細情報編集'),
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doBookmark([id]); } }, '🔖 ブックマーク追加'),
-            h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete([id]); } }, '🗑 動画の削除'),
-        ]);
+        menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, menuItems([id]));
         document.body.appendChild(menuBackdrop);
         document.body.appendChild(menuEl);
         // アンカー(ボタン)直下に配置。画面外なら上側へ反転。

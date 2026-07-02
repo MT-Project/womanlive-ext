@@ -44,28 +44,8 @@
 
         // ---- 並び替え ----
         const controls = h('div', { class: 'wlext-plist-controls' });
-        const sortRow = h('div', { class: 'wlext-plist-sortrow' });
-        sortRow.appendChild(h('span', { class: 'wlext-plist-ctl-label' }, '並び替え:'));
-        const sortDefs = [['name', 'タグ名'], ['count', '動画本数']];
-        const btns = {};
-        sortDefs.forEach(([key, label]) => {
-            const b = h('div', {
-                class: 'wlext-plist-sortbtn', onClick: () => {
-                    if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-                    else { state.sort = key; state.dir = (key === 'name') ? 'asc' : 'desc'; }
-                    paint(); renderGrid();
-                }
-            }, label);
-            btns[key] = b; sortRow.appendChild(b);
-        });
-        function paint() {
-            sortDefs.forEach(([key, label]) => {
-                const b = btns[key]; const a = state.sort === key;
-                b.classList.toggle('active', a);
-                b.textContent = label + (a ? (state.dir === 'asc' ? ' ↑' : ' ↓') : '');
-            });
-        }
-        controls.appendChild(sortRow);
+        const sorter = WL.sortRow([['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc']], state, renderGrid);
+        controls.appendChild(sorter.el);
         controls.appendChild(h('div', { class: 'wlext-plist-ctl-label' },
             'サムネイルの推奨比率は 16:9（例: 640×360）です。各タグ右下の画像ボタンから変更できます。'));
         container.appendChild(controls);
@@ -106,7 +86,7 @@
                 thumb.appendChild(h('div', { class: 'wlext-series-count', title: tag.count + '本' }, String(tag.count)));
                 // 編集ボタン: サムネイル右下 (クリックでサムネイル編集)
                 const edit = h('div', { class: 'wlext-tag-edit', title: 'サムネイルを編集' }, WL.icon('image', 15));
-                edit.addEventListener('click', (e) => { e.stopPropagation(); startEdit(); });
+                edit.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); startEdit(); });
                 thumb.appendChild(edit);
             }
 
@@ -205,13 +185,11 @@
 
             paintThumb();
             const nameEl = h('div', { class: 'wlext-series-name' }, tag.name);
-            return h('div', {
-                class: 'wlext-series-card wlext-tag-card', title: '「' + tag.name + '」で検索',
-                onClick: () => WL.searchBy('@tag:"' + tag.name + '"')
-            }, [thumb, nameEl]);
+            const url = '/search?q=' + encodeURIComponent('@tag:"' + tag.name + '"');
+            return WL.navA(url, { class: 'wlext-series-card wlext-tag-card', title: '「' + tag.name + '」で検索' }, [thumb, nameEl]);
         }
 
-        paint();
+        sorter.paint();
         renderGrid();
     }
 

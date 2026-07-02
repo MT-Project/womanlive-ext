@@ -18,7 +18,7 @@
     }
 
     function svgPlus() {
-        return '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v3"></path><line x1="16" y1="5" x2="22" y2="5"></line><line x1="19" y1="2" x2="19" y2="8"></line></svg>';
+        return WL.iconSvg('bookmark-add', '100%');
     }
     function svgOn() {
         return '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
@@ -118,22 +118,11 @@
     }
 
     // 一覧カード: フォルダ名の右 (グリッド/リスト共通の folderName クラスを優先)
-    function findFolderName(card) {
-        const fav = card.querySelector('.fywxlxv');
-        if (fav) return fav;
-        // フォールバック (クラス変化時): nowrap + ellipsis のテキスト div
-        const divs = card.querySelectorAll('div');
-        for (const d of divs) {
-            const s = getComputedStyle(d);
-            if (s.whiteSpace === 'nowrap' && s.textOverflow === 'ellipsis' && d.textContent.trim()) return d;
-        }
-        return null;
-    }
     function ensureList() {
         const root = document.getElementById('root'); if (!root) return;
         root.querySelectorAll('a[href^="/watch/"]').forEach(card => {
             const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
-            const folderEl = findFolderName(card); if (!folderEl) return;
+            const folderEl = WL.findFolderName(card); if (!folderEl) return;
             // カード内に1つだけ。毎回フォルダ名の直後へ再配置する (グリッド⇔リスト切替に追従)
             let btn = card.querySelector('.wlext-bm-inline');
             if (!btn) {

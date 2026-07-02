@@ -5,7 +5,7 @@
 // 通常のキーワード検索はクライアントの fetch フックからここへ振り向けられます。
 // (元ファイルは一切変更しません)
 // =============================================================
-const { db } = require('../db');
+const { db, SORT_MAP } = require('../db');
 
 exports.fullSearch = (req, res) => {
     const { q, page = 1, perPage = 20, sort = 'updated_desc', seed } = req.query;
@@ -158,22 +158,7 @@ exports.fullSearch = (req, res) => {
             orderBy = 'RANDOM()';
         }
     } else {
-        const sortMap = {
-            'updated_desc': 'f.updated_at DESC',
-            'updated_asc': 'f.updated_at ASC',
-            'name_asc': 'ext_namekey(f.filename) ASC',
-            'duration_desc': 'm.duration DESC',
-            'created_desc': 'm.created_at DESC',
-            'history_desc': 'm.last_played_at DESC',
-            'play_count_desc': 'm.play_count DESC',
-            'ext_rating_desc': 'IFNULL(e.rating,0) DESC, f.updated_at DESC',
-            'ext_rating_asc': 'IFNULL(e.rating,0) ASC, f.updated_at DESC',
-            'ext_screenshots_desc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) DESC, f.updated_at DESC',
-            'ext_screenshots_asc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) ASC, f.updated_at DESC',
-            'ext_displayname_asc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) ASC",
-            'ext_displayname_desc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) DESC",
-        };
-        orderBy = sortMap[sort] || 'f.updated_at DESC';
+        orderBy = SORT_MAP[sort] || SORT_MAP['updated_desc'];
     }
 
     try {

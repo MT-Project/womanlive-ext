@@ -38,24 +38,8 @@
 
         // ---- コントロール ----
         const controls = h('div', { class: 'wlext-plist-controls' });
-        const sortRow = h('div', { class: 'wlext-plist-sortrow' });
-        sortRow.appendChild(h('span', { class: 'wlext-plist-ctl-label' }, '並び替え:'));
-        const sortDefs = [['name', 'フォルダ名'], ['count', '動画本数'], ['rating', '評価']];
-        const btns = {};
-        sortDefs.forEach(([key, label]) => {
-            const b = h('div', {
-                class: 'wlext-plist-sortbtn', onClick: () => {
-                    if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-                    else { state.sort = key; state.dir = (key === 'name') ? 'asc' : 'desc'; }
-                    paint(); renderGrid();
-                }
-            }, label);
-            btns[key] = b; sortRow.appendChild(b);
-        });
-        function paint() {
-            sortDefs.forEach(([key, label]) => { const b = btns[key]; const a = state.sort === key; b.classList.toggle('active', a); b.textContent = label + (a ? (state.dir === 'asc' ? ' ↑' : ' ↓') : ''); });
-        }
-        controls.appendChild(sortRow);
+        const sorter = WL.sortRow([['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']], state, renderGrid);
+        controls.appendChild(sorter.el);
 
         const addRow = h('div', { class: 'wlext-plist-sortrow' });
         addRow.appendChild(h('button', { class: 'wlext-btn', onClick: addFolder }, '＋ フォルダを追加'));
@@ -67,12 +51,13 @@
 
         function cmp(a, b) {
             const dir = state.dir === 'asc' ? 1 : -1;
-            if (state.sort === 'name') return (a.name || '').localeCompare(b.name || '', 'ja') * dir;
-            if (state.sort === 'count') return ((a.count || 0) - (b.count || 0)) * dir || (a.name || '').localeCompare(b.name || '', 'ja');
+            const byName = WL.nameCompare(a.name || '', b.name || '');
+            if (state.sort === 'name') return byName * dir;
+            if (state.sort === 'count') return ((a.count || 0) - (b.count || 0)) * dir || byName;
             const ra = a.avgRating, rb = b.avgRating;
-            if (ra == null && rb == null) return (a.name || '').localeCompare(b.name || '', 'ja');
+            if (ra == null && rb == null) return byName;
             if (ra == null) return 1; if (rb == null) return -1;
-            return (ra - rb) * dir || (a.name || '').localeCompare(b.name || '', 'ja');
+            return (ra - rb) * dir || byName;
         }
 
         function renderGrid() {
@@ -83,12 +68,13 @@
         }
 
         function card(s) {
-            const thumb = h('div', { class: 'wlext-video-thumb', onClick: () => openFolder(s), title: '開く' });
+            const url = '/search?q=' + encodeURIComponent('@bookmark:' + s.id);
+            const thumb = WL.navA(url, { class: 'wlext-video-thumb', title: '開く' });
             if (s.thumbId) thumb.appendChild(h('img', { src: '/api/video/' + s.thumbId + '/thumbnail', loading: 'lazy', alt: s.name }));
             else thumb.appendChild(h('div', { class: 'noimg' }, 'NO IMAGE'));
             thumb.appendChild(h('div', { class: 'wlext-series-count', title: s.count + '本' }, String(s.count)));
 
-            const nameEl = h('div', { class: 'wlext-series-name', style: { cursor: 'pointer' }, onClick: () => openFolder(s), title: '開く' }, s.name || '(無題)');
+            const nameEl = WL.navA(url, { class: 'wlext-series-name', style: { cursor: 'pointer' }, title: '開く' }, s.name || '(無題)');
 
             const ratingEl = h('div', { class: 'wlext-series-rating' });
             if (s.avgRating != null) { ratingEl.appendChild(WL.starsEl(Math.round(s.avgRating))); ratingEl.appendChild(h('span', { class: 'wlext-series-ratingnum' }, s.avgRating.toFixed(1))); }
@@ -101,8 +87,6 @@
 
             return h('div', { class: 'wlext-series-card' }, [thumb, nameEl, ratingEl, actions]);
         }
-
-        function openFolder(s) { WL.searchBy('@bookmark:' + s.id); }
 
         function addFolder() {
             const input = h('input', { class: 'wlext-input', placeholder: 'フォルダ名' });
@@ -129,7 +113,7 @@
             });
         }
 
-        paint();
+        sorter.paint();
         await reload();
     }
 

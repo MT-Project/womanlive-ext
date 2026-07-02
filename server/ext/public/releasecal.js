@@ -41,10 +41,13 @@
         years.forEach(year => {
             const total = byYear[year].reduce((s, m) => s + m.count, 0);
             const sec = h('div', { class: 'wlext-relcal-year' });
-            sec.appendChild(h('h3', { class: 'wlext-relcal-year-title', title: year + '年の動画を検索', onClick: () => WL.searchBy('@releaseyear:"' + year + '"') }, year + '年 (' + total + ')'));
+            const yearUrl = '/search?q=' + encodeURIComponent('@releaseyear:"' + year + '"');
+            sec.appendChild(WL.navA(yearUrl, { class: 'wlext-relcal-year-link' },
+                h('h3', { class: 'wlext-relcal-year-title', title: year + '年の動画を検索' }, year + '年 (' + total + ')')));
             const grid = h('div', { class: 'wlext-relcal-months' });
             byYear[year].sort((a, b) => parseInt(a.month, 10) - parseInt(b.month, 10)).forEach(m => {
-                grid.appendChild(h('div', { class: 'wlext-relcal-month', onClick: () => WL.searchBy('@releasemonth:"' + m.year + '-' + m.month + '"') }, [
+                const monthUrl = '/search?q=' + encodeURIComponent('@releasemonth:"' + m.year + '-' + m.month + '"');
+                grid.appendChild(WL.navA(monthUrl, { class: 'wlext-relcal-month' }, [
                     h('span', { class: 'wlext-relcal-month-name' }, parseInt(m.month, 10) + '月'),
                     h('span', { class: 'wlext-relcal-month-count' }, '(' + m.count + ')')
                 ]));
@@ -57,7 +60,8 @@
             const sec = h('div', { class: 'wlext-relcal-year' });
             sec.appendChild(h('h3', { class: 'wlext-relcal-year-title' }, '未分類 (' + data.uncategorized + ')'));
             const grid = h('div', { class: 'wlext-relcal-months' });
-            grid.appendChild(h('div', { class: 'wlext-relcal-month', title: '公開日が未設定の動画', onClick: () => WL.searchBy('@release:none') }, [
+            const noneUrl = '/search?q=' + encodeURIComponent('@release:none');
+            grid.appendChild(WL.navA(noneUrl, { class: 'wlext-relcal-month', title: '公開日が未設定の動画' }, [
                 h('span', { class: 'wlext-relcal-month-name' }, '公開日なし'),
                 h('span', { class: 'wlext-relcal-month-count' }, '(' + data.uncategorized + ')')
             ]));

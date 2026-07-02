@@ -4,7 +4,7 @@
 // /api/videos の代わりにこのエンドポイントを呼びます。
 // 戻り値の形は /api/videos と同じ { videos, totalCount } に揃えます。
 // =============================================================
-const { db } = require('../db');
+const { db, SORT_MAP } = require('../db');
 
 const VIDEO_FIELDS = `
     f.id, f.path, f.filename, f.size,
@@ -115,22 +115,7 @@ exports.search = (req, res) => {
         `;
         const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
 
-        const sortMap = {
-            'updated_desc': 'f.updated_at DESC',
-            'updated_asc': 'f.updated_at ASC',
-            'name_asc': 'ext_namekey(f.filename) ASC',
-            'duration_desc': 'm.duration DESC',
-            'created_desc': 'm.created_at DESC',
-            'history_desc': 'm.last_played_at DESC',
-            'play_count_desc': 'm.play_count DESC',
-            'ext_rating_desc': 'IFNULL(e.rating,0) DESC, f.updated_at DESC',
-            'ext_rating_asc': 'IFNULL(e.rating,0) ASC, f.updated_at DESC',
-            'ext_screenshots_desc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) DESC, f.updated_at DESC',
-            'ext_screenshots_asc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) ASC, f.updated_at DESC',
-            'ext_displayname_asc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) ASC",
-            'ext_displayname_desc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) DESC",
-        };
-        const orderBy = sortMap[sort] || sortMap['updated_desc'];
+        const orderBy = SORT_MAP[sort] || SORT_MAP['updated_desc'];
 
         const total = db.prepare(`SELECT COUNT(*) AS total ${base}${whereSql}`).get(...params).total;
 

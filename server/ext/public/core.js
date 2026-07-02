@@ -45,6 +45,59 @@
     WL.nameKey = NK.nameKey;
     WL.nameCompare = NK.nameCompare;
 
+    /* ---------- 一覧 共通部品 ---------- */
+    // 検索カード内のフォルダ名要素。folderName クラス(.fywxlxv)を優先し、
+    // クラス変化時は nowrap+ellipsis のテキスト div にフォールバック。
+    WL.findFolderName = function (card) {
+        const fav = card.querySelector('.fywxlxv');
+        if (fav) return fav;
+        for (const d of card.querySelectorAll('div')) {
+            const s = getComputedStyle(d);
+            if (s.whiteSpace === 'nowrap' && s.textOverflow === 'ellipsis' && d.textContent.trim()) return d;
+        }
+        return null;
+    };
+
+    // クリック可能カードを <a href> 化するヘルパー。中クリック/Ctrl+クリック等は
+    // ブラウザ標準の新規タブ動作に任せ、通常の左クリックだけ SPA 風のフルリロード遷移にする。
+    WL.navA = function (url, props, children) {
+        props = Object.assign({ href: url }, props);
+        const userClick = props.onClick;
+        props.onClick = (e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            if (userClick) userClick(e); else WL.navigate(url);
+        };
+        return h('a', props, children);
+    };
+
+    // 並び替えボタン列。defs=[[key,label,defaultDir],...] / state={sort,dir}。
+    // 同じキー再クリックで asc/desc トグル、別キーは defaultDir(既定 asc)で開始。
+    // onChange は選択変更時に呼ばれる(グリッド再描画用)。返り値 {el, paint}。
+    WL.sortRow = function (defs, state, onChange) {
+        const row = h('div', { class: 'wlext-plist-sortrow' });
+        row.appendChild(h('span', { class: 'wlext-plist-ctl-label' }, '並び替え:'));
+        const btns = {};
+        function paint() {
+            defs.forEach(([key, label]) => {
+                const b = btns[key], a = state.sort === key;
+                b.classList.toggle('active', a);
+                b.textContent = label + (a ? (state.dir === 'asc' ? ' ↑' : ' ↓') : '');
+            });
+        }
+        defs.forEach(([key, label, defDir]) => {
+            const b = h('div', {
+                class: 'wlext-plist-sortbtn', onClick: () => {
+                    if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+                    else { state.sort = key; state.dir = defDir || 'asc'; }
+                    paint(); onChange();
+                }
+            }, label);
+            btns[key] = b; row.appendChild(b);
+        });
+        return { el: row, paint };
+    };
+
     /* ---------- 日付 / 時間 ---------- */
     function parseDate(s) {
         if (!s) return null;

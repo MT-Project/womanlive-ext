@@ -11,18 +11,6 @@
     WL._ssCount = WL._ssCount || {}; // id(number) -> 枚数(number)
     let pending = false;
 
-    // 検索カード内のフォルダ名要素 (bookmark.js と同じ判定。folderName クラスを優先)
-    function findFolderName(card) {
-        const fav = card.querySelector('.fywxlxv');
-        if (fav) return fav;
-        const divs = card.querySelectorAll('div');
-        for (const d of divs) {
-            const s = getComputedStyle(d);
-            if (s.whiteSpace === 'nowrap' && s.textOverflow === 'ellipsis' && d.textContent.trim()) return d;
-        }
-        return null;
-    }
-
     function paintBadge(badge) {
         const vid = Number(badge.getAttribute('data-vid'));
         const n = WL._ssCount[vid];
@@ -47,7 +35,7 @@
         root.querySelectorAll('a[href^="/watch/"]').forEach(card => {
             const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
             const vid = m[1];
-            const folderEl = findFolderName(card); if (!folderEl) return;
+            const folderEl = WL.findFolderName(card); if (!folderEl) return;
 
             let badge = card.querySelector('.wlext-ss-badge');
             const bm = card.querySelector('.wlext-bm-btn');
