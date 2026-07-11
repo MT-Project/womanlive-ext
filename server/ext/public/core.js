@@ -74,7 +74,17 @@
     // 並び替えボタン列。defs=[[key,label,defaultDir],...] / state={sort,dir}。
     // 同じキー再クリックで asc/desc トグル、別キーは defaultDir(既定 asc)で開始。
     // onChange は選択変更時に呼ばれる(グリッド再描画用)。返り値 {el, paint}。
-    WL.sortRow = function (defs, state, onChange) {
+    // storeKey を渡すと選択を localStorage に保存し、次回表示時に復元する。
+    WL.sortRow = function (defs, state, onChange, storeKey) {
+        if (storeKey) {
+            try {
+                const saved = JSON.parse(localStorage.getItem(storeKey) || 'null');
+                if (saved && defs.some(d => d[0] === saved.sort)) {
+                    state.sort = saved.sort;
+                    state.dir = saved.dir === 'desc' ? 'desc' : 'asc';
+                }
+            } catch (e) { /* 復元できなければ既定のまま */ }
+        }
         const row = h('div', { class: 'wlext-plist-sortrow' });
         row.appendChild(h('span', { class: 'wlext-plist-ctl-label' }, '並び替え:'));
         const btns = {};
@@ -90,6 +100,7 @@
                 class: 'wlext-plist-sortbtn', onClick: () => {
                     if (state.sort === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
                     else { state.sort = key; state.dir = defDir || 'asc'; }
+                    if (storeKey) { try { localStorage.setItem(storeKey, JSON.stringify({ sort: state.sort, dir: state.dir })); } catch (e) { } }
                     paint(); onChange();
                 }
             }, label);

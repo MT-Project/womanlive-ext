@@ -55,7 +55,7 @@
         const sorter = WL.sortRow([
             ['rating', '評価', 'desc'], ['videoCount', '出演数', 'desc'], ['furigana', 'ふりがな', 'asc'], ['height', '身長', 'asc'], ['weight', '体重', 'asc'],
             ['bust', 'バスト', 'asc'], ['cup', 'カップ数', 'asc'], ['waist', 'ウェスト', 'asc'], ['hip', 'ヒップ', 'asc'], ['age', '年齢', 'desc']
-        ], state, renderGrid);
+        ], state, renderGrid, 'wlext_sort_performers');
         controls.appendChild(sorter.el);
 
         // フィルタ行

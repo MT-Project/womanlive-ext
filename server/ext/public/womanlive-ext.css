@@ -530,7 +530,11 @@
 .wlext-pp-section-title {
     font-size: 1.1rem; font-weight: bold; margin: 2rem 0 1rem;
     border-bottom: 1px solid var(--border-primary, #e4e4e4); padding-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.5rem;
 }
+/* 見出し右側の操作ボタン (関連スクリーンショットの 最近/ランダム 切替) */
+.wlext-pp-title-actions { margin-left: auto; display: inline-flex; gap: 0.4rem; }
+.wlext-pp-section-title .wlext-plist-sortbtn { font-weight: normal; font-size: 0.8rem; }
 .wlext-pp-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
 .wlext-pp-tag {
     font-size: 0.75rem; padding: 0.2rem 0.6rem;
@@ -743,6 +747,14 @@
 }
 .wlext-tag-edit:hover { opacity: 1; background: var(--accent, #007acc); }
 .wlext-tag-edit .wlext-ico { width: 15px; height: 15px; display: block; }
+/* プリセット順ソートのグループ見出し区切り (グリッド全幅) */
+.wlext-taglist-sep {
+    grid-column: 1 / -1;
+    font-size: 0.92rem; font-weight: 600; color: var(--text-primary, #222);
+    border-bottom: 1px solid var(--border-primary, #e4e4e4);
+    padding-bottom: 0.3rem; margin-top: 0.6rem;
+}
+.wlext-taglist-sep:first-child { margin-top: 0; }
 
 /* ---- スクリーンショット枚数バッジ (検索カード: フォルダ名の右) ---- */
 .wlext-ss-badge {

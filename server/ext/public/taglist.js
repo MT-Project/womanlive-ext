@@ -33,8 +33,13 @@
         document.body.appendChild(page);
         window.scrollTo(0, 0);
 
-        let list;
-        try { list = await WL.api.tagsList(); }
+        let list, presets;
+        try {
+            [list, presets] = await Promise.all([
+                WL.api.tagsList(),
+                WL.loadVideoTagPresets().catch(() => [])   // プリセットが読めなくても一覧は表示する
+            ]);
+        }
         catch (e) { container.innerHTML = ''; container.appendChild(h('div', null, '読み込みに失敗しました: ' + e.message)); return; }
 
         const state = { sort: 'name', dir: 'asc' };
@@ -44,7 +49,7 @@
 
         // ---- 並び替え ----
         const controls = h('div', { class: 'wlext-plist-controls' });
-        const sorter = WL.sortRow([['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc']], state, renderGrid);
+        const sorter = WL.sortRow([['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc'], ['preset', 'プリセット順', 'asc']], state, renderGrid, 'wlext_sort_tags');
         controls.appendChild(sorter.el);
         controls.appendChild(h('div', { class: 'wlext-plist-ctl-label' },
             'サムネイルの推奨比率は 16:9（例: 640×360）です。各タグ右下の画像ボタンから変更できます。'));
@@ -61,10 +66,38 @@
         }
 
         function renderGrid() {
-            const sorted = list.slice().sort(cmp);
             grid.innerHTML = '';
-            if (!sorted.length) { grid.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, 'タグが設定された動画がありません')); return; }
-            sorted.forEach(t => grid.appendChild(card(t)));
+            const sections = state.sort === 'preset'
+                ? presetSections()
+                : [{ label: '', items: list.slice().sort(cmp) }];
+            if (!sections.some(s => s.items.length)) { grid.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, 'タグが設定された動画がありません')); return; }
+            sections.forEach(sec => {
+                if (sec.label) grid.appendChild(h('div', { class: 'wlext-taglist-sep' }, sec.label));
+                sec.items.forEach(t => grid.appendChild(card(t)));
+            });
+        }
+
+        // プリセット順: タグプリセットの並びでセクション化。# グループがあれば
+        // グループ間にグループ名の見出し区切りを挟む(ネストは「親 / 子」表記)。
+        // プリセットに無いタグは末尾へ(グループがあるときのみ「プリセット外」見出し)。
+        function presetSections() {
+            const byKey = new Map(list.map(t => [t.name.toLowerCase(), t]));
+            const used = new Set();
+            const sections = [];
+            (function walk(node, label) {
+                const items = [];
+                node.tags.forEach(nm => {
+                    const t = byKey.get(String(nm).toLowerCase());
+                    if (t && !used.has(t)) { used.add(t); items.push(t); }
+                });
+                if (items.length) sections.push({ label, items });
+                node.children.forEach(c => walk(c, label ? label + ' / ' + c.name : c.name));
+            })(WL.parseTagGroups(presets), '');
+            const hasGroups = sections.some(s => s.label);
+            const rest = list.filter(t => !used.has(t)).sort((a, b) => WL.nameCompare(a.name, b.name));
+            if (rest.length) sections.push({ label: hasGroups ? 'プリセット外' : '', items: rest });
+            if (state.dir === 'desc') { sections.reverse(); sections.forEach(s => s.items.reverse()); }
+            return sections;
         }
 
         function card(tag) {

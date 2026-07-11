@@ -64,7 +64,7 @@
         performerImageUrl: (id, bust) => '/ext/api/performer/' + id + '/image' + (bust ? ('?t=' + bust) : ''),
         setPerformerImage: (id, dataUrl) => req('/ext/api/performer/' + id + '/image', jsonOpts('POST', { image: dataUrl })),
         performerVideos: (id) => req('/ext/api/performer/' + id + '/videos'),
-        performerScreenshots: (id) => req('/ext/api/performer/' + id + '/screenshots'),
+        performerScreenshots: (id, sort) => req('/ext/api/performer/' + id + '/screenshots' + (sort ? '?sort=' + sort : '')),
 
         // ブックマーク
         bmFolders: () => req('/ext/api/bookmark/folders'),

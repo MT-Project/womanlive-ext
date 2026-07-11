@@ -241,18 +241,32 @@
         }).catch(() => { vidGrid.innerHTML = ''; });
 
         // ---- 関連スクリーンショット ----
-        container.appendChild(h('div', { class: 'wlext-pp-section-title' }, '関連スクリーンショット'));
-        const ssGrid = h('div', { class: 'wlext-ss-grid' }, h('div', { style: { color: 'var(--text-secondary,#888)' } }, '読み込み中...'));
+        // 既定は最近8件。「ランダム」は押すたびに8件を抽選し直す。
+        // グリッドは関連動画と同じ列幅(wlext-video-grid)でサムネイルサイズを揃える。
+        const ssRecentBtn = h('div', { class: 'wlext-plist-sortbtn active', onClick: () => loadShots('recent') }, '最近');
+        const ssRandomBtn = h('div', { class: 'wlext-plist-sortbtn', title: '押すたびに8件を抽選します', onClick: () => loadShots('random') }, 'ランダム');
+        container.appendChild(h('div', { class: 'wlext-pp-section-title' }, [
+            h('span', null, '関連スクリーンショット'),
+            h('span', { class: 'wlext-pp-title-actions' }, [ssRecentBtn, ssRandomBtn])
+        ]));
+        const ssGrid = h('div', { class: 'wlext-video-grid' });
         container.appendChild(ssGrid);
-        WL.api.performerScreenshots(id).then(shots => {
+        function loadShots(mode) {
+            ssRecentBtn.classList.toggle('active', mode === 'recent');
+            ssRandomBtn.classList.toggle('active', mode === 'random');
             ssGrid.innerHTML = '';
-            if (!shots.length) { ssGrid.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, '関連スクリーンショットはありません')); return; }
-            shots.forEach(s => {
-                const card = h('a', { class: 'wlext-ss-card', href: '/watch/' + s.video_id + '?t=' + Math.floor(s.timestamp || 0) },
-                    h('img', { src: '/api/screenshot/' + s.id + '/image', loading: 'lazy' }));
-                ssGrid.appendChild(card);
-            });
-        }).catch(() => { ssGrid.innerHTML = ''; });
+            ssGrid.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, '読み込み中...'));
+            WL.api.performerScreenshots(id, mode === 'random' ? 'random' : '').then(shots => {
+                ssGrid.innerHTML = '';
+                if (!shots.length) { ssGrid.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, '関連スクリーンショットはありません')); return; }
+                shots.forEach(s => {
+                    const card = h('a', { class: 'wlext-ss-card', href: '/watch/' + s.video_id + '?t=' + Math.floor(s.timestamp || 0) },
+                        h('img', { src: '/api/screenshot/' + s.id + '/image', loading: 'lazy' }));
+                    ssGrid.appendChild(card);
+                });
+            }).catch(() => { ssGrid.innerHTML = ''; });
+        }
+        loadShots('recent');
 
         window.scrollTo(0, 0);
     }

@@ -34,7 +34,7 @@
 
         // ---- 並び替え ----
         const controls = h('div', { class: 'wlext-plist-controls' });
-        const sorter = WL.sortRow([['name', 'シリーズ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']], state, renderGrid);
+        const sorter = WL.sortRow([['name', 'シリーズ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']], state, renderGrid, 'wlext_sort_series');
         controls.appendChild(sorter.el);
         container.appendChild(controls);
 
