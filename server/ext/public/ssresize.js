@@ -23,8 +23,8 @@
     function ensure() {
         if (!WL.matchWatch()) return;
         const root = document.getElementById('root'); if (!root) return;
-        const section = root.querySelector('.smd4qe2'); // screenshotsSection (本家クラス)
-        if (!section || !section.querySelector('.sva5x5f')) return; // スクショ0枚なら不要
+        const section = root.querySelector('[class*="screenshotsSection_"]'); // 本家クラス(プロパティ名ベース)
+        if (!section || !section.querySelector('[class*="screenshotImage_"]')) return; // スクショ0枚なら不要
         if (section.querySelector('.wlext-ss-resize')) return;
 
         const w = currentWidth();

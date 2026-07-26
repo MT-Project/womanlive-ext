@@ -18,8 +18,9 @@
         const missing = [];
         root.querySelectorAll('a[href^="/watch/"]').forEach(card => {
             const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
-            // グリッド表示 .gdn66kd / リスト表示 .l1wadlm1 どちらのサムネ枠も対象にする
-            const thumb = card.querySelector('.gdn66kd, .l1wadlm1');
+            // サムネ枠はグリッド/リスト共通の1クラス(thumbnailWrapper_*)。表示切替はカード側でなく
+            // 祖先コンテナの素クラス.listで行われる(applyTagsのisList判定を参照)。
+            const thumb = card.querySelector('[class*="thumbnailWrapper_"]');
             const folderEl = WL.findFolderName(card);  // folderName (grid/list 共通)
             if (!thumb || !folderEl) return;
             // 折りたたみバッジ(フォルダ名/メーカー)が枠内に収まるよう、サムネ枠を相対配置に
@@ -35,31 +36,35 @@
     /* ---------- リスト表示: タグを幅に合わせて表示 ('…' で省略・マウスオーバーで全表示) ---------- */
     function splitTags(s) { return String(s == null ? '' : s).split('\n').map(t => t.trim()).filter(Boolean); }
 
-    // 本家のタグ枠(.trl3mnc)はグリッドと共有のため触らず、リスト時のみ隠して別枠(.wlext-tagrow)で表示する。
+    // 本家のタグ枠(tagBadgeContainer_*)はグリッドと共有のため触らず、リスト時のみ隠して別枠(.wlext-tagrow)で表示する。
+    // グリッド/リストはカードでなく祖先コンテナの素クラス.list(非ハッシュ)で判別する。
     function applyTags(card, id) {
-        const isList = !!card.querySelector('.l1wadlm1');
-        const native = card.querySelector('.trl3mnc:not(.wlext-tagrow)');
+        const isList = !!card.closest('.list');
+        const native = card.querySelector('[class*="tagBadgeContainer_"]:not(.wlext-tagrow)');
         let mine = card.querySelector('.wlext-tagrow');
         if (!isList || !native) { if (mine) mine.remove(); if (native) native.style.display = ''; return; }
         const tags = splitTags(WL._videoTags && WL._videoTags[id]);
         if (!tags.length) { if (mine) mine.remove(); native.style.display = ''; return; }
         native.style.display = 'none';
-        if (!mine) { mine = h('div', { class: 'trl3mnc wlext-tagrow' }); native.insertAdjacentElement('afterend', mine); }
+        if (!mine) { mine = h('div', { class: native.className + ' wlext-tagrow' }); native.insertAdjacentElement('afterend', mine); }
         const sig = mine.clientWidth + '|' + tags.join('');
         if (mine.getAttribute('data-sig') === sig) return;   // 同じ幅・タグなら再フィットしない
         mine.setAttribute('data-sig', sig);
-        fitTags(mine, tags);
+        fitTags(mine, tags, native);
     }
 
-    function fitTags(cont, tags) {
+    function fitTags(cont, tags, native) {
+        // タグバッジ本体のクラスは native 内の既存バッジから拝借する(タグ0件時は本家プロパティ名で検索)
+        const sample = native.querySelector('[class*="tagBadge_"]') || document.querySelector('[class*="tagBadge_"]:not([class*="tagBadgeContainer_"])');
+        const badgeClass = sample ? sample.className : '';
         cont.innerHTML = '';
-        tags.forEach(t => cont.appendChild(h('span', { class: 't3g6pxg' }, t)));
-        const ell = h('span', { class: 't3g6pxg wlext-tag-ell', title: tags.join(' / ') }, '…');
+        tags.forEach(t => cont.appendChild(h('span', { class: badgeClass }, t)));
+        const ell = h('span', { class: badgeClass + ' wlext-tag-ell', title: tags.join(' / ') }, '…');
         cont.appendChild(ell);
         ell.style.display = 'none';
         if (cont.scrollWidth <= cont.clientWidth) { ell.remove(); return; } // 全部入る
         ell.style.display = '';
-        const badges = [...cont.querySelectorAll('.t3g6pxg:not(.wlext-tag-ell)')];
+        const badges = [...cont.querySelectorAll(':scope > span:not(.wlext-tag-ell)')];
         while (cont.scrollWidth > cont.clientWidth && badges.length) badges.pop().remove();
     }
 
@@ -68,10 +73,13 @@
     function applyCard(id, thumb, folderEl, card) {
         const meta = WL._cardMeta[id];
 
-        // 1) フォルダ名 → サムネ左下 (長さバッジ .dnjkqxo の形式を流用)
+        // 1) フォルダ名 → サムネ左下 (長さバッジ durationBadge_* の形式を流用)
         const txt = (folderEl.textContent || '').trim();
         let fo = card.querySelector('.wlext-folder-ov');
-        if (!fo && txt) fo = h('div', { class: 'dnjkqxo wlext-folder-ov', title: txt }, txt);
+        if (!fo && txt) {
+            const durSample = thumb.querySelector('[class*="durationBadge_"]');
+            fo = h('div', { class: (durSample ? durSample.className + ' ' : '') + 'wlext-folder-ov', title: txt }, txt);
+        }
         if (fo && fo.parentElement !== thumb) thumb.appendChild(fo);   // 現ビューのサムネへ寄せる
         // 元のフォルダ名は隠す (テキストは残す: 既存のブックマーク/スクショ注入が参照するため)
         folderEl.style.display = 'none';

@@ -251,13 +251,13 @@
     function patchCalendarLinks() {
         if (location.pathname !== '/calendar') return;
         const root = document.getElementById('root'); if (!root) return;
-        root.querySelectorAll('.y1ulw4s2').forEach(sec => {
-            const yearEl = sec.querySelector('.y14kbhkq');
+        root.querySelectorAll('[class*="yearSection_"]').forEach(sec => {
+            const yearEl = sec.querySelector('[class*="yearTitle_"]');
             const ym = yearEl && yearEl.textContent.match(/^(\d+)年/);
             if (!ym) return;
             const year = ym[1];
             if (!yearEl.dataset.wlextMid) attachMiddleClick(yearEl, () => calendarYearUrl(year));
-            sec.querySelectorAll('.m9tt3rv').forEach(monthEl => {
+            sec.querySelectorAll('[class*="monthItem_"]').forEach(monthEl => {
                 if (monthEl.dataset.wlextMid) return;
                 const mm = monthEl.textContent.match(/^(\d+)月/);
                 if (!mm) return;

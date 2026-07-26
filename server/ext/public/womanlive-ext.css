@@ -239,8 +239,11 @@
 .wlext-genre-chip::before { content: "ジャンル: "; opacity: 0.6; }
 .wlext-genre-chip:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
 
-/* ---- スクリーンショット表示サイズ変更 (本家クラス: セクション=smd4qe2 / カード=sh40nas / ラッパー=sm0rvxt / 画像=sva5x5f) ---- */
-.smd4qe2 .sh40nas, .smd4qe2 .sm0rvxt, .smd4qe2 .sva5x5f, .smd4qe2 .wlext-cover-card {
+/* ---- スクリーンショット表示サイズ変更 (本家クラスをプロパティ名の属性セレクタで参照。ハッシュはビルド毎に変わるため) ---- */
+[class*="screenshotsSection_"] [class*="screenshotCard_"],
+[class*="screenshotsSection_"] [class*="screenshotImageWrapper_"],
+[class*="screenshotsSection_"] [class*="screenshotImage_"],
+[class*="screenshotsSection_"] .wlext-cover-card {
     width: var(--wlext-ss-w, 160px) !important;
     height: var(--wlext-ss-h, 90px) !important;
 }
@@ -769,7 +772,7 @@
 .wlext-ss-badge.loading { opacity: 0.45; }
 
 /* ---- 検索結果カードの拡張 (メーカー右上 / フォルダ名→左下 / 評価) ---- */
-/* フォルダ名: 長さバッジ(.dnjkqxo)の見た目を流用し、左下へ配置 */
+/* フォルダ名: 長さバッジ(durationBadge_*)の見た目を流用し、左下へ配置 */
 .wlext-folder-ov {
     right: auto; left: 4px; max-width: 58%;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

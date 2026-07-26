@@ -67,19 +67,22 @@
         const id = cardId(card); if (id != null) toggleSelect(id);
     }, true);
 
-    // リスト表示の「⋮」(本家タグ付けメニュー .ly42xzs) を、動画単体の操作メニューに差し替える。
+    // リスト表示の「⋮」(本家タグ付けメニュー menuBtnWrapper_*) を、動画単体の操作メニューに差し替える。
+    // グリッド/リストは同じ⋮ボタンを共有するため、祖先コンテナの素クラス.listでリストのみに限定する
+    // (グリッド表示は従来どおり本家のタグメニューのまま)。
     // 本家の onClick(タグメニュー開閉)へ届く前にキャプチャ段階で横取りする。
     document.addEventListener('click', (e) => {
         if (selectionMode) return;
         const t = e.target;
-        const wrapper = t && t.closest ? t.closest('.ly42xzs') : null;  // listMenuBtnWrapper
+        const wrapper = t && t.closest ? t.closest('[class*="menuBtnWrapper_"]') : null;
         if (!wrapper) return;
         const card = wrapper.closest('a[href^="/watch/"]');
+        if (!card || !card.closest('.list')) return;   // グリッド表示は対象外
         const root = document.getElementById('root');
-        if (!card || !root || !root.contains(card)) return;
+        if (!root || !root.contains(card)) return;
         const id = cardId(card); if (id == null) return;
         e.preventDefault(); e.stopPropagation();
-        openVideoMenu(id, wrapper.querySelector('.mbok9eh') || wrapper);
+        openVideoMenu(id, wrapper.querySelector('[class*="menuBtn_"]') || wrapper);
     }, true);
 
     /* ---------- FAB ---------- */
