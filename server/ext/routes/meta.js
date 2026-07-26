@@ -97,7 +97,7 @@ exports.putMeta = (req, res) => {
     }
 };
 
-// GET /ext/api/meta/bulk?ids=1,2,3  -> { "1": {display_name, rating}, ... }
+// GET /ext/api/meta/bulk?ids=1,2,3  -> { "1": {display_name, rating, maker, performers}, ... }
 // 一覧画面で表示名を置換するための軽量バルク取得
 exports.bulk = (req, res) => {
     try {
@@ -106,16 +106,30 @@ exports.bulk = (req, res) => {
 
         const placeholders = ids.map(() => '?').join(',');
         const rows = db.prepare(`
-            SELECT f.id, e.display_name, e.rating, e.maker
+            SELECT f.id, e.display_name, e.rating, e.maker, e.performers
             FROM files f
             JOIN ext_video_meta e ON e.hash = f.hash
             WHERE f.id IN (${placeholders})
         `).all(...ids);
 
+        // 出演者名は登場する id をまとめて1回で引く(動画ごとの個別クエリを避ける)
+        const pidSet = new Set();
+        rows.forEach(r => splitList(r.performers).forEach(pid => { const n = parseInt(pid, 10); if (!isNaN(n)) pidSet.add(n); }));
+        const nameById = new Map();
+        if (pidSet.size) {
+            const pids = [...pidSet];
+            const ph = pids.map(() => '?').join(',');
+            db.prepare(`SELECT id, name FROM ext_performers WHERE id IN (${ph})`).all(...pids)
+                .forEach(p => nameById.set(p.id, p.name));
+        }
+
         const map = {};
         for (const r of rows) {
-            if (r.display_name || r.rating || r.maker) {
-                map[r.id] = { display_name: r.display_name || '', rating: r.rating || 0, maker: r.maker || '' };
+            const performers = splitList(r.performers)
+                .map(pid => ({ id: parseInt(pid, 10), name: nameById.get(parseInt(pid, 10)) || '' }))
+                .filter(p => p.name);
+            if (r.display_name || r.rating || r.maker || performers.length) {
+                map[r.id] = { display_name: r.display_name || '', rating: r.rating || 0, maker: r.maker || '', performers };
             }
         }
         res.json(map);

@@ -763,7 +763,6 @@
 .wlext-ss-badge {
     display: inline-flex; align-items: center; gap: 2px;
     vertical-align: middle; flex-shrink: 0;
-    margin-left: 0.4rem;
     color: var(--text-secondary, #888);
     font-size: 0.72rem; line-height: 1;
 }
@@ -788,10 +787,39 @@
 .trl3mnc.wlext-tagrow { flex-wrap: nowrap; overflow: hidden; }
 .wlext-tag-ell { cursor: help; }
 
-/* 評価: もともとフォルダ名があった位置(スクショ枚数・ブックマークと同じ行) */
 .wlext-card-rating { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
 .wlext-card-rating .wlext-rating { margin: 0; }
 .wlext-card-rating .wlext-star { font-size: 0.85rem; }
+
+/* ---- 評価/スクショ数/ブックマークの行 (タイトル直下。表示位置は WL.cardMetaRow が判定) ---- */
+.wlext-card-meta {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin: 0.25rem 0 0.35rem;
+}
+.wlext-card-meta .wlext-card-rating { order: 1; }
+.wlext-card-meta .wlext-ss-badge { order: 2; }
+.wlext-card-meta .wlext-bm-btn { order: 3; }
+/* ポスター表示: 行そのものをサムネ左上のオーバーレイにする(タイトル欄が非表示のため)。
+   サイズはサムネ右上のメーカー名表示(.wlext-maker-ov, 10px)に合わせる */
+.wlext-card-meta.wlext-card-meta-poster {
+    position: absolute; top: 4px; left: 4px; z-index: 4;
+    margin: 0; padding: 2px 5px; border-radius: 3px; gap: 0.3rem;
+    background: rgba(0, 0, 0, 0.55);
+}
+.wlext-card-meta.wlext-card-meta-poster .wlext-star { color: rgba(255, 255, 255, 0.35); font-size: 10px; }
+.wlext-card-meta.wlext-card-meta-poster .wlext-star.on { color: #f5b301; }
+.wlext-card-meta.wlext-card-meta-poster .wlext-ss-badge { color: rgba(255, 255, 255, 0.85); font-size: 10px; }
+.wlext-card-meta.wlext-card-meta-poster .wlext-ss-badge .wlext-ico { width: 10px; height: 10px; }
+.wlext-card-meta.wlext-card-meta-poster .wlext-bm-btn { width: 12px; height: 12px; color: rgba(255, 255, 255, 0.85); }
+.wlext-card-meta.wlext-card-meta-poster .wlext-bm-btn:hover,
+.wlext-card-meta.wlext-card-meta-poster .wlext-bm-btn.on { color: #fff; }
+
+/* ---- 出演者名の行 (リスト表示のみ。評価行の下・タグ行の上。画像は出さず名前だけ) ---- */
+.wlext-card-performers {
+    font-size: 0.8rem; color: var(--text-secondary, #888);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    margin-bottom: 0.3rem;
+}
 
 /* ---- ブックマーク ボタン ---- */
 .wlext-bm-btn {
@@ -802,7 +830,6 @@
 }
 .wlext-bm-btn:hover { color: var(--accent, #007acc); }
 .wlext-bm-btn.on { color: var(--accent, #007acc); }
-.wlext-bm-inline { margin-left: 0.35rem; }
 .wlext-bm-watch {
     width: 24px; height: 24px; margin-left: 0.5rem; vertical-align: middle;
 }

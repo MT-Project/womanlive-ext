@@ -35,18 +35,10 @@
         root.querySelectorAll('a[href^="/watch/"]').forEach(card => {
             const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
             const vid = m[1];
-            const folderEl = WL.findFolderName(card); if (!folderEl) return;
+            const row = WL.cardMetaRow(card); if (!row) return;
 
-            let badge = card.querySelector('.wlext-ss-badge');
-            const bm = card.querySelector('.wlext-bm-btn');
-            if (!badge) {
-                badge = makeBadge(vid);
-                if (bm) bm.insertAdjacentElement('beforebegin', badge); // ブックマークボタンの左
-                else folderEl.insertAdjacentElement('afterend', badge);  // 無ければフォルダ名の右
-            } else if (bm && badge.nextElementSibling !== bm) {
-                // 後からブックマークボタンが入った等で順序が崩れたら、左へ寄せ直す
-                bm.insertAdjacentElement('beforebegin', badge);
-            }
+            let badge = row.querySelector('.wlext-ss-badge');
+            if (!badge) { badge = makeBadge(vid); row.appendChild(badge); } // 表示順は CSS の order で担保
             if (WL._ssCount[Number(vid)] == null) missing.push(Number(vid));
         });
         if (missing.length && !pending) fetchCounts(missing);

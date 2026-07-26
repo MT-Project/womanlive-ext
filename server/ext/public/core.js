@@ -46,16 +46,33 @@
     WL.nameCompare = NK.nameCompare;
 
     /* ---------- 一覧 共通部品 ---------- */
-    // 検索カード内のフォルダ名要素。folderName クラス(.fywxlxv)を優先し、
-    // クラス変化時は nowrap+ellipsis のテキスト div にフォールバック。
+    // 検索カード内のフォルダ名要素。プロパティ名ベースの属性セレクタ(folderName_*)を優先し、
+    // 本体の構造変化時は nowrap+ellipsis のテキスト div にフォールバック(拡張の注入要素は除外)。
     WL.findFolderName = function (card) {
-        const fav = card.querySelector('.fywxlxv');
-        if (fav) return fav;
+        const byProp = card.querySelector('[class*="folderName_"]');
+        if (byProp) return byProp;
         for (const d of card.querySelectorAll('div')) {
+            if (d.className.indexOf('wlext-') !== -1) continue; // 自身の注入要素(folder-ov等)は対象外
             const s = getComputedStyle(d);
             if (s.whiteSpace === 'nowrap' && s.textOverflow === 'ellipsis' && d.textContent.trim()) return d;
         }
         return null;
+    };
+
+    // 検索カードの評価/スクショ数/ブックマークをまとめる行。表示形式(グリッド/リスト/ポスター)に
+    // 応じて適切な位置(通常はタイトル直下、ポスターはサムネ上のオーバーレイ)へ配置する。
+    // cardenh/bookmark/screenshots の3箇所から呼ばれ、何度呼んでも同じ行を返す(冪等)。
+    WL.cardMetaRow = function (card) {
+        const isPoster = !!card.closest('.poster');
+        const parent = isPoster
+            ? card.querySelector('[class*="thumbnailWrapper_"]')
+            : (card.querySelector('[class*="filename_"]') || {}).parentElement;
+        if (!parent) return card.querySelector('.wlext-card-meta');
+        let row = card.querySelector('.wlext-card-meta');
+        if (!row) row = h('div', { class: 'wlext-card-meta' });
+        row.classList.toggle('wlext-card-meta-poster', isPoster);
+        if (row.parentElement !== parent) parent.appendChild(row);
+        return row;
     };
 
     // クリック可能カードを <a href> 化するヘルパー。中クリック/Ctrl+クリック等は

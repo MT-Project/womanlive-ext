@@ -72,27 +72,35 @@
     // 正しい位置へ再配置する。これにより グリッド⇔リスト 切替で重複しない。
     function applyCard(id, thumb, folderEl, card) {
         const meta = WL._cardMeta[id];
+        const isPoster = !!card.closest('.poster');
 
-        // 1) フォルダ名 → サムネ左下 (長さバッジ durationBadge_* の形式を流用)
+        // 1) フォルダ名 → サムネ左下 (長さバッジ durationBadge_* の形式を流用)。
+        //    ポスター表示は長さバッジが無く位置合わせできず、評価行と重なるため表示しない。
         const txt = (folderEl.textContent || '').trim();
         let fo = card.querySelector('.wlext-folder-ov');
-        if (!fo && txt) {
-            const durSample = thumb.querySelector('[class*="durationBadge_"]');
-            fo = h('div', { class: (durSample ? durSample.className + ' ' : '') + 'wlext-folder-ov', title: txt }, txt);
+        if (isPoster) {
+            if (fo) fo.remove();
+        } else {
+            if (!fo && txt) {
+                const durSample = thumb.querySelector('[class*="durationBadge_"]');
+                fo = h('div', { class: (durSample ? durSample.className + ' ' : '') + 'wlext-folder-ov', title: txt }, txt);
+            }
+            if (fo && fo.parentElement !== thumb) thumb.appendChild(fo);   // 現ビューのサムネへ寄せる
         }
-        if (fo && fo.parentElement !== thumb) thumb.appendChild(fo);   // 現ビューのサムネへ寄せる
         // 元のフォルダ名は隠す (テキストは残す: 既存のブックマーク/スクショ注入が参照するため)
         folderEl.style.display = 'none';
 
-        // 2) 評価を「フォルダ名があった位置」(フォルダ名の直前)へ
-        let rc = card.querySelector('.wlext-card-rating');
-        if (!rc) rc = h('div', { class: 'wlext-card-rating' });
-        if (folderEl.previousElementSibling !== rc) folderEl.insertAdjacentElement('beforebegin', rc);
-        const rating = meta ? (meta.rating || 0) : 0;
-        if (rc.getAttribute('data-r') !== String(rating)) {
-            rc.setAttribute('data-r', String(rating));
-            rc.innerHTML = '';
-            if (rating > 0) rc.appendChild(WL.starsEl(rating)); // 読み取り専用
+        // 2) 評価 (スクショ数・ブックマークと同じ行。位置は表示形式により WL.cardMetaRow が判定)
+        const row = WL.cardMetaRow(card);
+        if (row) {
+            let rc = row.querySelector('.wlext-card-rating');
+            if (!rc) { rc = h('div', { class: 'wlext-card-rating' }); row.appendChild(rc); }
+            const rating = meta ? (meta.rating || 0) : 0;
+            if (rc.getAttribute('data-r') !== String(rating)) {
+                rc.setAttribute('data-r', String(rating));
+                rc.innerHTML = '';
+                if (rating > 0) rc.appendChild(WL.starsEl(rating)); // 読み取り専用
+            }
         }
 
         // 3) メーカー → サムネ右上 (半透明の白字)
@@ -101,6 +109,36 @@
             if (!mk) mk = h('div', { class: 'wlext-maker-ov' });
             if (mk.parentElement !== thumb) thumb.appendChild(mk);
             if (mk.textContent !== meta.maker) { mk.textContent = meta.maker; mk.title = meta.maker; }
+        }
+
+        // 4) 出演者 (リスト表示のみ。評価行の下・タグ行の上に名前だけ表示)
+        applyPerformers(card, meta);
+    }
+
+    // リスト表示で、登録済みの出演者名を評価行の下(タグ行の上)に表示する。画像は出さない。
+    function applyPerformers(card, meta) {
+        const isList = !!card.closest('.list');
+        const performers = (meta && Array.isArray(meta.performers)) ? meta.performers : [];
+        let row = card.querySelector('.wlext-card-performers');
+        if (!isList || !performers.length) { if (row) row.remove(); return; }
+
+        const metaRow = card.querySelector('.wlext-card-meta');
+        const parent = metaRow && metaRow.parentElement;
+        if (!parent) { if (row) row.remove(); return; }
+
+        const sig = performers.map(p => p.id).join(',');
+        if (!row) { row = h('div', { class: 'wlext-card-performers' }); }
+        if (row.getAttribute('data-sig') !== sig) {
+            row.setAttribute('data-sig', sig);
+            row.innerHTML = '';
+            row.title = performers.map(p => p.name).join('、');
+            performers.forEach((p, i) => {
+                if (i > 0) row.appendChild(document.createTextNode('、'));
+                row.appendChild(document.createTextNode(p.name));
+            });
+        }
+        if (row.previousElementSibling !== metaRow || row.parentElement !== parent) {
+            metaRow.insertAdjacentElement('afterend', row);
         }
     }
 

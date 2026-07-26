@@ -117,22 +117,14 @@
         document.body.appendChild(btn);
     }
 
-    // 一覧カード: フォルダ名の右 (グリッド/リスト共通の folderName クラスを優先)
+    // 一覧カード: 評価/スクショ数と同じ行へ (表示順は CSS の order で担保)
     function ensureList() {
         const root = document.getElementById('root'); if (!root) return;
         root.querySelectorAll('a[href^="/watch/"]').forEach(card => {
             const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
-            const folderEl = WL.findFolderName(card); if (!folderEl) return;
-            // カード内に1つだけ。毎回フォルダ名の直後へ再配置する (グリッド⇔リスト切替に追従)
-            let btn = card.querySelector('.wlext-bm-inline');
-            if (!btn) {
-                folderEl.style.display = 'inline-block';
-                folderEl.style.maxWidth = 'calc(100% - 2rem)';
-                folderEl.style.verticalAlign = 'middle';
-                btn = makeBtn(m[1]);
-                btn.classList.add('wlext-bm-inline');
-            }
-            if (folderEl.nextElementSibling !== btn) folderEl.insertAdjacentElement('afterend', btn);
+            const row = WL.cardMetaRow(card); if (!row) return;
+            let btn = row.querySelector('.wlext-bm-btn');
+            if (!btn) { btn = makeBtn(m[1]); row.appendChild(btn); }
         });
     }
 
