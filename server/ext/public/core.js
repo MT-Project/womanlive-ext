@@ -168,8 +168,22 @@
     /* ---------- ナビゲーション ---------- */
     // 拡張からの遷移はフルリロードで行い、確実に React 側 (検索) や拡張側 (出演者) に届ける
     WL.navigate = (url) => { window.location.assign(url); };
-    WL.searchBy = (token) => { WL.navigate('/search?q=' + encodeURIComponent(token)); };
+    WL.searchHref = (token) => '/search?q=' + encodeURIComponent(token);
+    WL.searchBy = (token) => { WL.navigate(WL.searchHref(token)); };
     WL.openPerformer = (id) => { WL.navigate('/performer/' + id); };
+
+    /* ---------- 中クリック(新規タブ)対応 ---------- */
+    // <a href> にできない要素(タグの中にボタンを含むチップ等)へ data-wlext-href を付けると、
+    // 中クリックで新規タブを開けるようにする。委譲なので後から生成した要素にも効く。
+    const midTarget = (e) => e.target.closest && e.target.closest('[data-wlext-href]');
+    document.addEventListener('mousedown', (e) => { if (e.button === 1 && midTarget(e)) e.preventDefault(); });
+    document.addEventListener('auxclick', (e) => {
+        if (e.button !== 1) return;
+        const el = midTarget(e);
+        if (!el) return;
+        e.preventDefault(); e.stopPropagation();
+        window.open(el.getAttribute('data-wlext-href'), '_blank');
+    });
 
     // 拡張ページ共通ヘッダー (本家ヘッダーと統一: ロゴ/検索/操作) は nav.js が定義。
 
@@ -504,7 +518,7 @@
         footer.appendChild(h('button', { class: 'wlext-btn', onClick: () => close() }, 'キャンセル'));
         if (onSave) footer.appendChild(h('button', { class: 'wlext-btn ' + (danger ? 'wlext-btn-danger' : 'wlext-btn-primary'), onClick: async (e) => { e.target.disabled = true; try { await onSave(close); } finally { if (e.target) e.target.disabled = false; } } }, saveLabel || '保存'));
         const dlg = h('div', { class: 'wlext-dialog' }, [
-            h('div', { class: 'wlext-dialog-header' }, [h('span', null, title), h('span', { class: 'wlext-close-x', onClick: () => close() }, '✕')]),
+            h('div', { class: 'wlext-dialog-header' }, [h('span', { class: 'wlext-dialog-title' }, title), h('span', { class: 'wlext-close-x', onClick: () => close() }, '✕')]),
             h('div', { class: 'wlext-dialog-body' }, bodyEl),
             footer
         ]);
@@ -623,7 +637,7 @@
             selected.forEach(t => { if (!presetSet.has(t)) { tree.tags.push(t); presetSet.add(t); } });
             tree.tags = [...new Set(tree.tags)];
             if (!presetSet.size) {
-                chipsHost.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)', fontSize: '0.85rem' } }, 'プリセットタグがありません。「タグ編集...」で追加してください。'));
+                chipsHost.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)', fontSize: '0.85rem' } }, 'プリセットタグがありません。「プリセット編集...」で追加してください。'));
                 return;
             }
             if (tree.tags.length) chipsHost.appendChild(chipRow(tree.tags));
@@ -632,7 +646,15 @@
 
         Promise.resolve(opts.loadPresets()).then(p => { presets = Array.isArray(p) ? p : []; renderChips(); }).catch(() => renderChips());
 
-        const editBtn = h('button', { class: 'wlext-btn' }, 'タグ編集...');
+        // プリセット編集中はダイアログのタイトルを「プリセット編集...」に差し替え、右に ? ヘルプを出す。
+        let titleEl = null;
+        function paintTitle() {
+            if (!titleEl) return;
+            titleEl.textContent = editMode ? 'プリセット編集...' : (opts.title || 'タグを設定');
+            if (editMode && WL.presetHelpBtn) titleEl.appendChild(WL.presetHelpBtn());
+        }
+
+        const editBtn = h('button', { class: 'wlext-btn' }, 'プリセット編集...');
         editBtn.addEventListener('click', async () => {
             if (!editMode) {
                 editMode = true;
@@ -640,6 +662,7 @@
                 textarea.style.display = 'block';
                 chipsHost.style.display = 'none';
                 editBtn.textContent = 'プリセットを保存';
+                paintTitle();
             } else {
                 const arr = textarea.value.split('\n').map(s => s.trim()).filter(Boolean);
                 try { await opts.savePresets(arr); presets = [...new Set(arr)]; }
@@ -647,7 +670,8 @@
                 editMode = false;
                 textarea.style.display = 'none';
                 chipsHost.style.display = 'flex';
-                editBtn.textContent = 'タグ編集...';
+                editBtn.textContent = 'プリセット編集...';
+                paintTitle();
                 renderChips();
                 WL.toast('プリセットタグを保存しました', 'success');
             }
@@ -667,6 +691,7 @@
                 close();
             }
         });
+        titleEl = body.closest('.wlext-dialog').querySelector('.wlext-dialog-title');
     };
 
     console.log('[WomanLive拡張] core 初期化完了');

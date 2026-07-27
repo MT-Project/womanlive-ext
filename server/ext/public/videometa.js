@@ -90,7 +90,7 @@
         if (meta.genres && meta.genres.length) {
             const g = h('div', { class: 'wlext-genres' });
             meta.genres.forEach(name => {
-                g.appendChild(h('span', { class: 'wlext-genre-chip', title: '「' + name + '」で検索', onClick: () => WL.searchBy('@genre:"' + name + '"') }, [
+                g.appendChild(h('span', { class: 'wlext-genre-chip', title: '「' + name + '」で検索', 'data-wlext-href': WL.searchHref('@genre:"' + name + '"'), onClick: () => WL.searchBy('@genre:"' + name + '"') }, [
                     h('span', null, name),
                     excludeIcon('@notgenre:"' + name + '"', name)
                 ]));
@@ -103,7 +103,7 @@
             const ref = meta.release_date || meta.video_date;
             const row = h('div', { class: 'wlext-performers' });
             meta.performers.forEach(p => {
-                const imgHost = h('div', { class: 'wlext-performer-img', title: '出演者ページを開く', onClick: () => WL.openPerformer(p.id) });
+                const imgHost = h('div', { class: 'wlext-performer-img', title: '出演者ページを開く', 'data-wlext-href': '/performer/' + p.id, onClick: () => WL.openPerformer(p.id) });
                 if (p.has_image) {
                     const im = h('img', { alt: p.name });
                     im.onerror = () => { imgHost.textContent = '👤'; };
@@ -113,7 +113,7 @@
 
                 const age = WL.ageYM(p.birthday, ref);
                 const nameRow = h('div', { class: 'wlext-performer-name-row' }, [
-                    h('span', { class: 'wlext-performer-name', title: '「' + p.name + '」で検索', onClick: () => WL.searchBy('@performer:' + p.id) }, p.name),
+                    h('span', { class: 'wlext-performer-name', title: '「' + p.name + '」で検索', 'data-wlext-href': WL.searchHref('@performer:' + p.id), onClick: () => WL.searchBy('@performer:' + p.id) }, p.name),
                     excludeIcon('@notperformer:' + p.id, p.name)
                 ]);
                 const card = h('div', { class: 'wlext-performer-card' }, [
@@ -134,7 +134,7 @@
             grid.appendChild(h('div', { class: 'wlext-key' }, key + ':'));
             grid.appendChild(h('div', { class: 'wlext-val' }, valNode));
         }
-        function linkVal(text, token) { return h('span', { class: 'wlext-link', title: '「' + text + '」で検索', onClick: () => WL.searchBy(token) }, text); }
+        function linkVal(text, token) { return h('span', { class: 'wlext-link', title: '「' + text + '」で検索', 'data-wlext-href': WL.searchHref(token), onClick: () => WL.searchBy(token) }, text); }
         // 包含リンク + 除外ボタン(虫メガネ+マイナス) を並べる
         function valEx(text, incToken, excToken) { return h('span', { class: 'wlext-val-pair' }, [linkVal(text, incToken), excludeIcon(excToken, text)]); }
 
@@ -168,6 +168,7 @@
     function excludeIcon(token, label) {
         return h('span', {
             class: 'wlext-exclude-btn', title: '「' + label + '」を除外して検索',
+            'data-wlext-href': WL.searchHref(token),
             html: WL.iconSvg('zoom-out', 14),
             onClick: (e) => { e.stopPropagation(); WL.searchBy(token); }
         });

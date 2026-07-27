@@ -178,9 +178,16 @@
             helpRow('@notmaker:"名前"', '除外（notseries / notlabel / notgenre / notdirector / notperformer）')
         ];
     }
+    // プリセット編集(タグのグループ化)のヘルプ。プリセット編集ダイアログのタイトル右から開く。
+    function buildPresetHelpContent() {
+        return [
+            h('div', { class: 'wlext-help-title' }, 'プリセット編集のヘルプ'),
+            h('div', { class: 'wlext-help-note' }, '行頭に #（または全角 ＃） を付けるとグループ見出しになります。 ## 名前 でさらに下位グループ（ネスト）となります。見出しと次の見出しの間のタグがそのグループに属します。')
+        ];
+    }
     function ensureHelpPop() {
         if (helpPop) return helpPop;
-        helpPop = h('div', { class: 'wlext-help-pop' }, buildHelpContent());
+        helpPop = h('div', { class: 'wlext-help-pop' });
         helpPop.addEventListener('mouseenter', () => clearTimeout(helpTimer));
         helpPop.addEventListener('mouseleave', () => { if (!helpPinned) helpTimer = setTimeout(hideHelp, 200); });
         document.body.appendChild(helpPop);
@@ -197,11 +204,24 @@
         if (left < 8) left = 8;
         helpPop.style.left = left + 'px';
     }
-    function showHelp(anchor) { helpAnchor = anchor; ensureHelpPop(); helpPop.style.display = 'block'; positionHelp(); }
+    function showHelp(anchor) {
+        helpAnchor = anchor;
+        ensureHelpPop();
+        // ポップオーバーは使い回し。アンカーごとに中身が違うので、種類が変わったときだけ作り直す。
+        const spec = anchor._wlHelp || { key: 'search', build: buildHelpContent };
+        if (helpPop._wlHelpKey !== spec.key) {
+            helpPop.innerHTML = '';
+            spec.build().forEach(n => helpPop.appendChild(n));
+            helpPop._wlHelpKey = spec.key;
+        }
+        helpPop.style.display = 'block';
+        positionHelp();
+    }
     function hideHelp() { if (helpPop) helpPop.style.display = 'none'; helpPinned = false; }
 
-    function makeHelpBtn() {
-        const btn = h('button', { class: 'wlext-action wlext-help-btn', type: 'button', title: '検索のヘルプ' });
+    function makeHelpBtn(spec) {
+        const btn = h('button', { class: 'wlext-action wlext-help-btn', type: 'button', title: (spec && spec.tooltip) || '検索のヘルプ' });
+        if (spec) btn._wlHelp = spec;
         btn.innerHTML = iconSvg('help', 20, 2);
         btn.addEventListener('mouseenter', () => { clearTimeout(helpTimer); showHelp(btn); });
         btn.addEventListener('mouseleave', () => { if (helpPinned) return; helpTimer = setTimeout(hideHelp, 200); });
@@ -214,6 +234,7 @@
         return btn;
     }
     WL.makeHelpBtn = makeHelpBtn;
+    WL.presetHelpBtn = () => makeHelpBtn({ key: 'preset', build: buildPresetHelpContent, tooltip: 'プリセット編集のヘルプ' });
 
     document.addEventListener('click', (e) => {
         if (helpPop && helpPop.style.display === 'block' &&

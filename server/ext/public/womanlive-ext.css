@@ -331,6 +331,7 @@
     font-weight: bold;
     display: flex; justify-content: space-between; align-items: center;
 }
+.wlext-dialog-title { display: flex; align-items: center; gap: 0.35rem; }
 .wlext-dialog-body { padding: 1rem 1.1rem; overflow-y: auto; }
 .wlext-dialog-footer {
     padding: 0.8rem 1.1rem;
@@ -820,6 +821,8 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     margin-bottom: 0.3rem;
 }
+.wlext-card-performer { color: inherit; text-decoration: none; }
+.wlext-card-performer:hover { color: var(--accent, #007acc); text-decoration: underline; }
 
 /* ---- ブックマーク ボタン ---- */
 .wlext-bm-btn {

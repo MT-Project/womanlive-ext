@@ -134,7 +134,13 @@
             row.title = performers.map(p => p.name).join('、');
             performers.forEach((p, i) => {
                 if (i > 0) row.appendChild(document.createTextNode('、'));
-                row.appendChild(document.createTextNode(p.name));
+                // <a href> にして中クリック(新規タブ)はブラウザ標準に任せる。
+                // 左クリックはカード本体(動画へ遷移)へ伝播させない。
+                const url = '/performer/' + p.id;
+                row.appendChild(WL.navA(url, {
+                    class: 'wlext-card-performer', title: p.name + 'のページを開く',
+                    onClick: (e) => { e.stopPropagation(); WL.navigate(url); }
+                }, p.name));
             });
         }
         if (row.previousElementSibling !== metaRow || row.parentElement !== parent) {
