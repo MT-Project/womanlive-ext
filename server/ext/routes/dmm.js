@@ -23,8 +23,31 @@ function normDate(s) {
 function names(arr) { return (arr || []).map(x => x && x.name).filter(Boolean); }
 function firstName(arr) { const n = names(arr); return n.length ? n[0] : ''; }
 
+// 通販(mono)の item は imageURL.large を返さず list/small (数KBのサムネ) しか無い。
+// 同じ場所に大判の *pl.jpg があるので、末尾を差し替えた URL を候補に加える。
+function largeImageUrl(url) {
+    return /(ps|pt)\.jpg$/i.test(url) ? url.replace(/(ps|pt)\.jpg$/i, 'pl.jpg') : '';
+}
+
+// DMM は存在しない画像にも 200 で数KBの代替画像を返すため、URL の有無では判定できない。
+// HEAD で実際のバイト数を比べ、一番大きいものをカバーに使う(代替画像は必ず小さい)。
+async function pickLargestImage(urls) {
+    const cands = urls.filter((u, i, a) => u && a.indexOf(u) === i);
+    let best = cands[0] || '', bestLen = -1;
+    for (const u of cands) {
+        let len = 0;
+        try {
+            const r = await fetch(u, { method: 'HEAD' });
+            if (r.ok) len = Number(r.headers.get('content-length') || 0);
+        } catch (e) { /* 測れなければ 0 扱いで次の候補へ */ }
+        if (len > bestLen) { best = u; bestLen = len; }
+    }
+    return best;
+}
+
 function mapItem(it) {
     const ii = it.iteminfo || {};
+    const img = (it.imageURL && (it.imageURL.large || it.imageURL.list || it.imageURL.small)) || '';
     return {
         content_id: it.content_id || '',
         title: it.title || '',
@@ -35,12 +58,21 @@ function mapItem(it) {
         label: firstName(ii.label),
         actresses: names(ii.actress),
         directors: names(ii.director),
-        imageLarge: (it.imageURL && (it.imageURL.large || it.imageURL.list || it.imageURL.small)) || ''
+        imageLarge: largeImageUrl(img) || img,
+        imageAlt: img          // 大判が無かったとき用のフォールバック
     };
 }
 
-async function callDmm(apiId, affId, extraParam) {
-    const url = `https://api.dmm.com/affiliate/v3/ItemList?api_id=${encodeURIComponent(apiId)}&affiliate_id=${encodeURIComponent(affId)}&site=FANZA&service=digital&floor=videoa&hits=20&sort=date&${extraParam}&output=json`;
+// 検索する売り場。ItemList API は service/floor ごとに引くので、動画(digital/videoa)に
+// 無い作品(DVD のみの作品など)を拾えるよう、通販(mono/dvd)も順に試す。
+// 例: ODVHJ-067 は digital/videoa では 0 件、mono/dvd の keyword 検索で 1 件ヒットする。
+const FLOORS = [
+    { service: 'digital', floor: 'videoa' },
+    { service: 'mono', floor: 'dvd' }
+];
+
+async function callDmm(apiId, affId, fl, extraParam) {
+    const url = `https://api.dmm.com/affiliate/v3/ItemList?api_id=${encodeURIComponent(apiId)}&affiliate_id=${encodeURIComponent(affId)}&site=FANZA&service=${fl.service}&floor=${fl.floor}&hits=20&sort=date&${extraParam}&output=json`;
     const r = await fetch(url);
     if (!r.ok) throw new Error('DMM API エラー (' + r.status + ')');
     const data = await r.json();
@@ -64,16 +96,20 @@ exports.search = async (req, res) => {
         const pn = meta && meta.model_no ? meta.model_no.trim() : '';
         if (!pn) return res.status(400).json({ error: '品番が設定されていません。先に品番を登録してください。' });
 
-        // 1) キーワード検索 (仕様どおり品番をキーワードに)
-        let result = await callDmm(apiId, affId, 'keyword=' + encodeURIComponent(pn));
-        let method = 'keyword';
-
-        // 2) 0件なら cid 厳密一致でフォールバック
-        if (!result.items || result.items.length === 0) {
-            const cid = toCid(pn);
+        // 売り場ごとに 1)キーワード検索(仕様どおり品番をキーワードに) →
+        // 2) 0件なら cid 厳密一致 の順で試し、最初に見つかったものを使う。
+        const cid = toCid(pn);
+        let result = {}, method = '';
+        for (const fl of FLOORS) {
+            const byKeyword = await callDmm(apiId, affId, fl, 'keyword=' + encodeURIComponent(pn));
+            if (byKeyword.items && byKeyword.items.length > 0) {
+                result = byKeyword; method = fl.floor + '/keyword'; break;
+            }
             if (cid) {
-                const byCid = await callDmm(apiId, affId, 'cid=' + encodeURIComponent(cid));
-                if (byCid.items && byCid.items.length > 0) { result = byCid; method = 'cid'; }
+                const byCid = await callDmm(apiId, affId, fl, 'cid=' + encodeURIComponent(cid));
+                if (byCid.items && byCid.items.length > 0) {
+                    result = byCid; method = fl.floor + '/cid'; break;
+                }
             }
         }
 
@@ -148,7 +184,8 @@ exports.apply = async (req, res) => {
         // カバー画像: 未設定かつ URL があれば取得して保存
         let coverSet = false;
         if (item.imageLarge && !cover.hasCover(fileRow)) {
-            try { await cover.storeCoverFromUrl(hash, item.imageLarge); coverSet = true; }
+            const url = await pickLargestImage([item.imageLarge, item.imageAlt]);
+            try { await cover.storeCoverFromUrl(hash, url); coverSet = true; }
             catch (e) { console.warn('[ext dmm] カバー取得失敗:', e.message); }
         }
 
