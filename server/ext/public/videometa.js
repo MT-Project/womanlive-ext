@@ -326,7 +326,11 @@
         addRow('表示動画名', item.title);
         addRow('公開日', item.date ? WL.fmtDate(item.date) : '');
         addRow('出演者', item.actresses);
-        addRow('ジャンル', item.genres);
+        // ジャンルは既存を消さずマージするので、プレビューにも結果(既存 + DMM)を出す
+        const curGenres = ((WL._meta[vid] || {}).genres) || [];
+        const mergedGenres = curGenres.slice();
+        (item.genres || []).forEach(g => { if (!mergedGenres.includes(g)) mergedGenres.push(g); });
+        addRow('ジャンル', mergedGenres);
         addRow('シリーズ名', item.series);
         addRow('メーカー', item.maker);
         addRow('レーベル', item.label);

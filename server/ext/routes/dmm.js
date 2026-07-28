@@ -115,6 +115,13 @@ exports.apply = async (req, res) => {
 
         // 既存メタ (品番・評価は維持。DMM項目は上書き)
         const cur = db.prepare('SELECT * FROM ext_video_meta WHERE hash = ?').get(hash) || {};
+
+        // ジャンルだけは上書きせず、既存 + DMM の和集合にする (手で足したジャンルを消さない)
+        const genres = splitList(cur.genres);
+        (item.genres || []).forEach(g => {
+            const gg = String(g).trim();
+            if (gg && !genres.includes(gg)) genres.push(gg);
+        });
         db.prepare(`
             INSERT INTO ext_video_meta
                 (hash, rating, display_name, model_no, release_date, series, maker, label, directors, genres, performers, updated_at)
@@ -134,7 +141,7 @@ exports.apply = async (req, res) => {
             (item.maker || '').trim() || null,
             (item.label || '').trim() || null,
             joinList(item.directors || []),
-            joinList(item.genres || []),
+            joinList(genres),
             joinList(performerIds)
         );
 
