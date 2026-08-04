@@ -21,6 +21,8 @@ const bookmark = require('./routes/bookmark');
 const backup = require('./routes/backup');
 const bulk = require('./routes/bulk');
 const frame = require('./routes/frame');
+const maintenance = require('./routes/maintenance');
+const replace = require('./routes/replace');
 const createInject = require('./inject');
 
 module.exports = function setupExt(app) {
@@ -40,6 +42,27 @@ module.exports = function setupExt(app) {
         }
     } catch (e) { console.error('[WomanLive private] ロードに失敗しました', e); }
 
+    // 1.7 本家の「クリーンアップ」に便乗して ext_* の孤立行も掃除する。
+    //     本家 routes.js の cleanupMetadata は screenshots と metadata しか消さないため、
+    //     動画ファイルが無くなると ext_* 側だけが hash をキーに残ってしまう。
+    //     本家は res.json を db.transaction の中で呼ぶので、ここでの削除も同じ
+    //     トランザクションに乗り、後続の VACUUM で領域も回収される。
+    app.use((req, res, next) => {
+        if (req.method !== 'DELETE' || req.path !== '/api/maintenance/metadata') return next();
+        const orig = res.json.bind(res);
+        res.json = (body) => {
+            try {
+                if (res.statusCode < 300 && body && body.success) {
+                    const r = maintenance.purgeOrphans();
+                    body.ext = r;
+                    if (r.total) console.log(`[WomanLive拡張] 参照されていない拡張データ ${r.total}件を削除しました`);
+                }
+            } catch (e) { console.error('[ext maintenance hook]', e); }
+            return orig(body);
+        };
+        next();
+    });
+
     // 2. 拡張 API 用の JSON ボディパーサ (画像アップロードのため大きめ)
     app.use('/ext/api', express.json({ limit: '25mb' }));
 
@@ -57,6 +80,14 @@ module.exports = function setupExt(app) {
 
     // -- コマ送り (フレームレート)
     app.get('/ext/api/video/:id/frameinfo', frame.frameInfo);
+
+    // -- メンテナンス (参照されていない拡張データ)
+    app.get('/ext/api/maintenance/orphans', maintenance.orphans);
+    app.post('/ext/api/maintenance/cleanup', maintenance.cleanup);
+
+    // -- メタデータの一括置換 (本家のタグ置換を置き換える)
+    app.get('/ext/api/metadata/replace-kinds', replace.kinds);
+    app.post('/ext/api/metadata/replace', replace.replace);
 
     // -- DMM(FANZA) 商品検索
     app.get('/ext/api/dmm/search', dmm.search);

@@ -42,6 +42,14 @@
         // コマ送り (フレームレート)
         frameInfo: (id) => req('/ext/api/video/' + id + '/frameinfo'),
 
+        // メンテナンス (参照されていない拡張データ)
+        maintenanceOrphans: () => req('/ext/api/maintenance/orphans'),
+        maintenanceCleanup: () => req('/ext/api/maintenance/cleanup', jsonOpts('POST', {})),
+
+        // メタデータの一括置換
+        replaceKinds: () => req('/ext/api/metadata/replace-kinds'),
+        replaceMetadata: (kind, before, after) => req('/ext/api/metadata/replace', jsonOpts('POST', { kind, before, after })),
+
         // 出演者
         searchPerformers: (q) => req('/ext/api/performers?q=' + encodeURIComponent(q || '')),
         performersAll: () => req('/ext/api/performers/all'),

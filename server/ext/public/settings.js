@@ -23,8 +23,31 @@
         return null;
     }
 
+    // 本家の「タグ置換」セクションを探す (見出しテキストで判定。クラス名には依存しない)
+    function findNativeTagRename() {
+        const root = document.getElementById('root'); if (!root) return null;
+        for (const el of root.querySelectorAll('h2')) {
+            if (el.textContent && el.textContent.indexOf('タグ置換') !== -1) {
+                const section = el.parentElement;
+                if (section && section.parentElement) return { section, title: el };
+            }
+        }
+        return null;
+    }
+
+    // 本家セクションを隠して、同じ見た目の「メタデータ置換」を同じ位置に差し込む。
+    // React が再描画しても拡張側のノードは残るので、毎回 ensure で存在を確認する。
+    function ensureReplaceSection() {
+        const native = findNativeTagRename();
+        if (!native) return;
+        native.section.style.display = 'none';
+        if (document.querySelector('.wlext-replace-section')) return;
+        native.section.insertAdjacentElement('afterend', buildReplaceSection(native));
+    }
+
     function ensure() {
         if (!WL.matchSettings()) return;
+        ensureReplaceSection();
         const found = findContainer();
         if (!found) return;
         if (found.container.querySelector('.wlext-settings-host')) return;
@@ -71,7 +94,140 @@
         //     設定ページへのUI注入は server/private/public/importui.js が行います。
         found.container.insertBefore(buildTagRuleSection(), found.firstSection);
         found.container.insertBefore(buildRelatedSection(), found.firstSection);
+        found.container.insertBefore(buildMaintenanceSection(), found.firstSection);
         found.container.insertBefore(buildBackupSection(), found.firstSection);
+    }
+
+    // メタデータ置換セクション (本家の「タグ置換」を置き換える)
+    // 見た目を揃えるため、クラス名は隠した本家セクションの要素から借りる
+    // (CSS Modules のハッシュを決め打ちしないで済む)。
+    function buildReplaceSection(native) {
+        const cls = (sel, fallback) => {
+            const el = native.section.querySelector(sel);
+            return el ? el.className : (fallback || '');
+        };
+        const box = native.section.querySelector('h2 + div');
+        const section = h('div', { class: 'wlext-replace-section ' + native.section.className });
+
+        const title = h('h2', { class: native.title.className });
+        const icon = native.title.querySelector('svg');
+        if (icon) title.appendChild(icon.cloneNode(true));
+        title.appendChild(document.createTextNode('メタデータ置換'));
+        section.appendChild(title);
+
+        const body = h('div', { class: box ? box.className : '' });
+        const desc = native.section.querySelector('p');
+        body.appendChild(h('p', { class: desc ? desc.className : '' },
+            'すでに設定済みのメタデータを置換します。(タグ等はプリセット側も変更されます)'));
+
+        const inputCls = cls('input');
+        const kindSel = h('select', { class: inputCls, style: { marginBottom: '0.5rem' } });
+        const before = h('input', { class: inputCls, type: 'text', spellcheck: 'false', placeholder: '置換対象' });
+        const after = h('input', { class: inputCls, type: 'text', spellcheck: 'false', placeholder: '置換後' });
+
+        const nativeBtn = native.section.querySelector('button');
+        const btnCls = nativeBtn ? nativeBtn.className : 'wlext-btn';
+        const runBtn = h('button', { class: btnCls }, '置換');
+
+        let kindLabel = () => (kindSel.options[kindSel.selectedIndex] || {}).text || '';
+        function setPlaceholders() {
+            before.placeholder = '置換対象の' + kindLabel();
+            after.placeholder = '置換後の' + kindLabel();
+        }
+        kindSel.addEventListener('change', setPlaceholders);
+
+        WL.api.replaceKinds().then(kinds => {
+            (kinds || []).forEach(k => kindSel.appendChild(h('option', { value: k.key }, k.label)));
+            setPlaceholders();
+        }).catch(() => { });
+
+        runBtn.addEventListener('click', () => {
+            const b = before.value.trim(), a = after.value.trim();
+            if (!b || !a) { WL.toast('置換対象と置換後の両方を入力してください', 'error'); return; }
+            if (b === a) { WL.toast('置換対象と置換後が同じです', 'error'); return; }
+            const label = kindLabel();
+            const body2 = h('div', null, [
+                h('div', { style: { marginBottom: '0.5rem' } }, '置換すると元に戻せません。置換していいですか？'),
+                h('div', { style: { fontSize: '0.9rem' } }, label + '：' + b + ' → ' + a)
+            ]);
+            WL.dialog('メタデータ置換', body2, {
+                saveLabel: '置換', danger: true,
+                onSave: async (close) => {
+                    try {
+                        const r = await WL.api.replaceMetadata(kindSel.value, b, a);
+                        WL.toast(r.changed + ' 件の' + label + 'を置換しました', 'success');
+                        before.value = ''; after.value = '';
+                        close();
+                    } catch (e) { WL.toast('置換に失敗しました: ' + e.message, 'error'); }
+                }
+            });
+        });
+
+        body.appendChild(h('div', { class: 'wlext-field' }, [h('label', null, '置換するメタデータ'), kindSel]));
+        body.appendChild(h('div', { class: 'wlext-field' }, before));
+        body.appendChild(h('div', { class: 'wlext-field' }, after));
+        body.appendChild(h('div', { class: 'wlext-inline' }, runBtn));
+        section.appendChild(body);
+        return section;
+    }
+
+    // メンテナンス (参照されていない拡張データ) セクション
+    // 本家の「クリーンアップ」でも同じ掃除が走るが、件数を確認してから単独で実行もできる。
+    function buildMaintenanceSection() {
+        const block = h('div', { class: 'wlext-settings-host wlext-settings-section' });
+        block.appendChild(extH3('拡張機能：メンテナンス（参照されていないデータ）'));
+        block.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
+            '動画ファイルが無くなったあとも残っている拡張機能のデータ（評価などのメタデータ・カバー画像・ブックマーク・関連動画キャッシュ）を削除します。本家の「メンテナンス」のクリーンアップを実行したときも同じ掃除が一緒に走ります。'));
+
+        const result = h('div', { style: { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' } });
+        const cleanBtn = h('button', { class: 'wlext-btn', onClick: () => doClean() }, '削除する');
+
+        function paint(d) {
+            if (!d.total) {
+                result.textContent = '参照されていないデータはありません。';
+                cleanBtn.disabled = true;
+                return;
+            }
+            result.textContent = d.items.filter(i => i.count)
+                .map(i => i.label + ': ' + i.count + '件').join('\n');
+            cleanBtn.disabled = false;
+        }
+        async function refresh() {
+            result.textContent = '確認中...';
+            cleanBtn.disabled = true;
+            try { paint(await WL.api.maintenanceOrphans()); }
+            catch (e) { result.textContent = 'エラー: ' + e.message; }
+        }
+        async function doClean() {
+            let d;
+            try { d = await WL.api.maintenanceOrphans(); }
+            catch (e) { WL.toast('確認に失敗: ' + e.message, 'error'); return; }
+            if (!d.total) { WL.toast('削除するデータはありません', 'error'); paint(d); return; }
+            const body = h('div', null, [
+                h('div', { style: { marginBottom: '0.5rem' } }, '次のデータを削除します。元に戻せません。'),
+                h('div', { style: { fontSize: '0.85rem', whiteSpace: 'pre-wrap' } },
+                    d.items.filter(i => i.count).map(i => '・' + i.label + ' ' + i.count + '件').join('\n'))
+            ]);
+            WL.dialog('参照されていないデータの削除', body, {
+                saveLabel: '削除', danger: true,
+                onSave: async (close) => {
+                    try {
+                        const r = await WL.api.maintenanceCleanup();
+                        WL.toast(r.total + '件を削除しました', 'success');
+                        close();
+                        refresh();
+                    } catch (e) { WL.toast('削除に失敗: ' + e.message, 'error'); }
+                }
+            });
+        }
+
+        block.appendChild(h('div', { class: 'wlext-inline' }, [
+            h('button', { class: 'wlext-btn', onClick: refresh }, '件数を確認'),
+            cleanBtn
+        ]));
+        block.appendChild(result);
+        refresh();
+        return block;
     }
 
     // 関連動画の重み付け セクション

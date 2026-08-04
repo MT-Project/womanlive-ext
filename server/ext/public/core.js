@@ -191,8 +191,17 @@
     function jsonResponse(data) {
         return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    // 表示動画名を使うかどうか (検索画面の「表示設定」のトグル。既定はON)
+    const DISPLAY_NAME_KEY = 'wlext_use_display_name';
+    WL.useDisplayName = () => {
+        try { return localStorage.getItem(DISPLAY_NAME_KEY) !== '0'; } catch (e) { return true; }
+    };
+    WL.setUseDisplayName = (on) => {
+        try { localStorage.setItem(DISPLAY_NAME_KEY, on ? '1' : '0'); } catch (e) { }
+    };
+
     function applyDisplayName(list) {
-        if (!Array.isArray(list)) return;
+        if (!Array.isArray(list) || !WL.useDisplayName()) return;
         list.forEach(v => { if (v && v.ext_display_name) { v._orig_filename = v.filename; v.filename = v.ext_display_name; } });
     }
     WL.applyDisplayName = applyDisplayName;
@@ -250,7 +259,10 @@
             if (data && data.video) {
                 try {
                     const meta = await WL.api.getMeta(id);
-                    if (meta && meta.display_name) { data.video.ext_display_name = meta.display_name; data.video._orig_filename = data.video.filename; data.video.filename = meta.display_name; }
+                    if (meta && meta.display_name) {
+                        data.video.ext_display_name = meta.display_name;
+                        if (WL.useDisplayName()) { data.video._orig_filename = data.video.filename; data.video.filename = meta.display_name; }
+                    }
                 } catch (e) { }
             }
             // 拡張: 関連動画をメタデータ類似度で差し替え (空なら本体のパス近傍を維持)
@@ -262,7 +274,8 @@
                 try {
                     const ids = data.relatedVideos.map(v => v.id);
                     const map = await WL.api.bulkMeta(ids);
-                    data.relatedVideos.forEach(v => { const m = map[v.id]; if (m && m.display_name) { v.ext_display_name = m.display_name; v.filename = m.display_name; } });
+                    const useDisp = WL.useDisplayName();
+                    data.relatedVideos.forEach(v => { const m = map[v.id]; if (m && m.display_name) { v.ext_display_name = m.display_name; if (useDisp) v.filename = m.display_name; } });
                 } catch (e) { }
             }
             return jsonResponse(data);

@@ -74,8 +74,20 @@ function compareStr(a, b, op) {
     }
 }
 
+// 出演者側にその項目が登録されていないか判定する。
+// 未登録を空文字として比較すると、カップ数の「≦ D」や「≠ D」などが
+// 全員に当たってしまうため、未登録はどの演算子でも不一致として扱う。
+function isUnset(field, raw) {
+    if (raw === null || raw === undefined) return true;
+    if (String(raw).trim() === '') return true;
+    // 評価は未評価でも 0 が入る。拡張の他の箇所(関連動画の平均評価)と同じく未登録として扱う。
+    if (field === 'rating' && Number(raw) === 0) return true;
+    return false;
+}
+
 function evalRule(rule, p, age) {
     const raw = fieldVal(p, rule.field, age);
+    if (isUnset(rule.field, raw)) return false;
     if (rule.op === '含む' || rule.op === 'contains') {
         return String(raw == null ? '' : raw).includes(String(rule.value));
     }
