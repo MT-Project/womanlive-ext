@@ -39,6 +39,9 @@
         saveMeta: (id, m) => req('/ext/api/video/' + id + '/meta', jsonOpts('PUT', m)),
         bulkMeta: (ids) => req('/ext/api/meta/bulk?ids=' + ids.join(',')),
 
+        // コマ送り (フレームレート)
+        frameInfo: (id) => req('/ext/api/video/' + id + '/frameinfo'),
+
         // 出演者
         searchPerformers: (q) => req('/ext/api/performers?q=' + encodeURIComponent(q || '')),
         performersAll: () => req('/ext/api/performers/all'),

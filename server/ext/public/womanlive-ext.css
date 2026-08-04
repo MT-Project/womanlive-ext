@@ -949,6 +949,17 @@
 .wlext-toast.error { border-left-color: var(--status-error, #e51400); }
 .wlext-toast.success { border-left-color: var(--status-success, #388a34); }
 
+/* ---- コマ送りインジケータ (プレイヤー中央上に一瞬だけ出す) ---- */
+.wlext-frame-ind {
+    position: fixed; top: 12%; left: 50%; transform: translateX(-50%);
+    z-index: 9100; pointer-events: none;
+    background: rgba(0, 0, 0, 0.72); color: #fff;
+    padding: 0.4rem 0.9rem; border-radius: 4px;
+    font-size: 0.85rem; font-variant-numeric: tabular-nums;
+    opacity: 0; transition: opacity 0.15s;
+}
+.wlext-frame-ind.on { opacity: 1; }
+
 /* =============================================================
    統一ヘッダー / ナビゲーションメニュー
    本家ヘッダー(.nj9rcpl 等)と同じ見た目を、独自クラスで複製。

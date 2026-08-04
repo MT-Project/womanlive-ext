@@ -20,6 +20,7 @@ const dmm = require('./routes/dmm');
 const bookmark = require('./routes/bookmark');
 const backup = require('./routes/backup');
 const bulk = require('./routes/bulk');
+const frame = require('./routes/frame');
 const createInject = require('./inject');
 
 module.exports = function setupExt(app) {
@@ -53,6 +54,9 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/settings', cover.getSettings);
     app.post('/ext/api/settings', cover.updateSettings);
     app.get('/ext/api/video/:id/cover', cover.getCover);
+
+    // -- コマ送り (フレームレート)
+    app.get('/ext/api/video/:id/frameinfo', frame.frameInfo);
 
     // -- DMM(FANZA) 商品検索
     app.get('/ext/api/dmm/search', dmm.search);
