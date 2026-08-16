@@ -3,6 +3,8 @@
    ・「,」で1コマ戻し / 「.」で1コマ送り (本家は Space と矢印しか使っていないので横取り不要)
    ・プレイヤー上の Shift+ホイールでも同じ操作 (本家のホイール5秒送りは修飾キーを見ないため、
      document のキャプチャ段階で先に奪う)
+   ・タッチ端末では一時停止中に「左端=コマ戻し / 中央=再生 / 右端=コマ送り」の半透明ボタンを重ねる
+     (本家のスワイプシークはプレイヤー外枠の bubble 登録なので、ボタンで touchstart を止めれば競合しない)
    ・フレームレートは /ext/api/video/:id/frameinfo (ffprobe) から取得
    ・トランスコード再生(native でない動画)はセグメント取得を挟むためコマ送りできない。
      操作されたら一度だけ通知して何もしない。
@@ -30,8 +32,8 @@
         if (curVid === vid) return;
         curVid = vid; info = null; notified = false;
         WL.api.frameInfo(vid)
-            .then(d => { if (curVid === vid) info = d; })
-            .catch(() => { if (curVid === vid) info = { native: false, fps: null }; });
+            .then(d => { if (curVid === vid) { info = d; syncOverlay(); } })
+            .catch(() => { if (curVid === vid) { info = { native: false, fps: null }; syncOverlay(); } });
     }
 
     /* ---------- 表示 ---------- */
@@ -106,10 +108,43 @@
         step(e.deltaY < 0 ? -1 : 1);
     }, { capture: true, passive: false });
 
+    /* ---------- タッチ端末用オーバーレイ ---------- */
+    // 一時停止中だけ、左端=コマ戻し / 中央=再生 / 右端=コマ送り を重ねる。
+    // 本家のスワイプシークはプレイヤー外枠の bubble で拾っているので、
+    // ボタン側の touchstart を止めればスワイプ判定自体が始まらない (＝競合しない)。
+    let ov = null;
+    function buildOverlay() {
+        const zone = (cls, ico, fn) => {
+            const z = h('div', { class: 'wlext-frame-z ' + cls }, [WL.icon(ico, 30)]);
+            z.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+            z.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); fn(); });
+            return z;
+        };
+        return h('div', { class: 'wlext-frame-ov' }, [
+            zone('back', 'step-back', () => step(-1)),
+            zone('play', 'play', () => { const v = videoEl(); if (v) v.play().catch(() => { }); }),
+            zone('fwd', 'step-forward', () => step(1))
+        ]);
+    }
+    function syncOverlay() {
+        const box = playerBox(), v = videoEl();
+        if (!box || !v) { if (ov) ov.remove(); return; }
+        if (!ov) ov = buildOverlay();
+        if (ov.parentElement !== box) box.appendChild(ov);
+        // 本家は video の play/pause イベントで自前の状態を更新するので、こちらも同じ源から見る
+        if (!v.dataset.wlextFs) {
+            v.dataset.wlextFs = '1';
+            ['play', 'pause', 'emptied'].forEach(t => v.addEventListener(t, syncOverlay));
+        }
+        ov.classList.toggle('on', v.paused);
+        ov.classList.toggle('nostep', !(info && info.native && info.fps));
+    }
+
     /* ---------- ページ検知 ---------- */
     WL.onEnsure(() => {
         const vid = WL.matchWatch();
-        if (!vid) { curVid = null; info = null; return; }
+        if (!vid) { curVid = null; info = null; if (ov) { ov.remove(); ov = null; } return; }
         load(vid);
+        syncOverlay();
     });
 })();

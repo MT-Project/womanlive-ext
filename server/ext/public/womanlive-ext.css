@@ -960,6 +960,28 @@
 }
 .wlext-frame-ind.on { opacity: 1; }
 
+/* ---- コマ送りオーバーレイ (タッチ端末・一時停止中のみ) ---- */
+/* 本家のコントロール(z-index:20)より下に置き、下部のコントロール行と重ならないよう縦中央に配置 */
+/* 既定は非表示。タッチ端末(主ポインタが coarse)で一時停止中(.on)のときだけ出す。
+   メディアクエリは詳細度を上げないので、表示側を .on 付きで書いて上書き関係を成立させる。 */
+.wlext-frame-ov { position: absolute; inset: 0; z-index: 15; pointer-events: none; display: none; }
+@media (pointer: coarse) { .wlext-frame-ov.on { display: block; } }
+.wlext-frame-z {
+    /* 縦は 45% (下部のコントロール行と重ならない位置) */
+    position: absolute; top: 45%; transform: translateY(-50%);
+    width: 3.6rem; height: 3.6rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.35); color: rgba(255, 255, 255, 0.85);
+    pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.wlext-frame-z:active { background: rgba(0, 0, 0, 0.6); color: #fff; }
+.wlext-frame-z.back { left: 6%; }
+.wlext-frame-z.fwd { right: 6%; }
+.wlext-frame-z.play { left: 50%; width: 4.4rem; height: 4.4rem; transform: translate(-50%, -50%); }
+.wlext-frame-z.play .wlext-ico { margin-left: 3px; }   /* 三角形の重心ぶんだけ右へ */
+/* コマ送りできない動画(変換再生・fps不明)では中央の再生だけ出す */
+.wlext-frame-ov.nostep .wlext-frame-z.back, .wlext-frame-ov.nostep .wlext-frame-z.fwd { display: none; }
+
 /* =============================================================
    統一ヘッダー / ナビゲーションメニュー
    本家ヘッダー(.nj9rcpl 等)と同じ見た目を、独自クラスで複製。
