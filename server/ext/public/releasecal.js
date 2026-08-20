@@ -21,6 +21,7 @@
         page.appendChild(container);
         document.body.appendChild(page);
         window.scrollTo(0, 0);
+        WL.setDocTitle('公開カレンダー');
 
         let data;
         try { data = await WL.api.releaseCalendar(); }

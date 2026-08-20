@@ -40,7 +40,11 @@ function buildConditions(tokens) {
         switch (field) {
             case 'maker': where.push('e.maker = ? COLLATE NOCASE'); params.push(value); break;
             case 'series': where.push('e.series = ? COLLATE NOCASE'); params.push(value); break;
-            case 'label': where.push('e.label = ? COLLATE NOCASE'); params.push(value); break;
+            case 'label':
+                // release:none と同じ書き方で「レーベルなし」を引けるようにする
+                if (value === 'none') where.push("(e.label IS NULL OR e.label = '')");
+                else { where.push('e.label = ? COLLATE NOCASE'); params.push(value); }
+                break;
             case 'model': where.push('e.model_no = ? COLLATE NOCASE'); params.push(value); break;
             case 'director':
                 where.push("('\n' || IFNULL(e.directors,'') || '\n') LIKE ? COLLATE NOCASE");

@@ -760,6 +760,72 @@
 }
 .wlext-taglist-sep:first-child { margin-top: 0; }
 
+/* ---- メーカー一覧 (横長リスト。動画一覧のリスト表示に寄せる) ---- */
+.wlext-maker-list { display: flex; flex-direction: column; gap: 0.7rem; }
+.wlext-maker-row {
+    display: grid; grid-template-columns: 110px minmax(0, 1fr) auto;
+    gap: 1rem; padding: 0.7rem;
+    border: 1px solid var(--border-primary, #e4e4e4); border-radius: 0.5rem;
+    background: var(--bg-secondary, #fafafa);
+}
+.wlext-maker-row:hover { border-color: var(--accent, #007acc); }
+/* メーカー画像は 1:1 (既定は色背景 + メーカー名。ラベルはタグ一覧と共通) */
+.wlext-maker-img {
+    position: relative; width: 110px; aspect-ratio: 1 / 1; overflow: hidden;
+    border-radius: 0.4rem; background: #000; text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+}
+.wlext-maker-img img { width: 100%; height: 100%; object-fit: cover; }
+.wlext-maker-body { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.wlext-maker-name {
+    font-size: 1.05rem; font-weight: 600; text-decoration: none;
+    color: var(--text-primary, #222); width: fit-content; max-width: 100%;
+}
+.wlext-maker-name:hover { color: var(--accent, #007acc); }
+.wlext-maker-furi { font-size: 0.75rem; font-weight: normal; color: var(--text-secondary, #888); margin-left: 0.4rem; }
+.wlext-maker-catch { font-size: 0.8rem; color: var(--text-secondary, #888); cursor: text; min-height: 1.15rem; }
+.wlext-maker-catch.empty { opacity: 0.45; }
+.wlext-maker-catch:hover { text-decoration: underline dotted; }
+.wlext-maker-catch-input { max-width: 32rem; }
+.wlext-maker-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.wlext-maker-tag {
+    font-size: 0.75rem; padding: 0.12rem 0.55rem; border-radius: 0.8rem; text-decoration: none;
+    background: var(--bg-hover, #ececec); color: var(--text-primary, #222);
+}
+.wlext-maker-tag:hover { background: var(--accent, #007acc); color: #fff; }
+.wlext-maker-labels { font-size: 0.8rem; }
+.wlext-maker-labels > summary { cursor: pointer; color: var(--text-secondary, #888); width: fit-content; }
+.wlext-maker-labels > summary:hover { color: var(--accent, #007acc); }
+.wlext-maker-label-list { display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; padding: 0.4rem 0 0 1rem; }
+.wlext-maker-label { font-size: 0.78rem; color: var(--text-primary, #222); text-decoration: none; }
+.wlext-maker-label:hover { color: var(--accent, #007acc); text-decoration: underline; }
+/* 「レーベルなし」は実在のレーベルではないので、控えめな色で末尾に置く */
+.wlext-maker-label.none { color: var(--text-secondary, #888); }
+.wlext-maker-side {
+    display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; gap: 0.5rem;
+}
+.wlext-maker-side-top { display: flex; align-items: center; gap: 0.6rem; }
+.wlext-maker-menu-btn {
+    cursor: pointer; color: var(--text-secondary, #888); font-size: 1.15rem; line-height: 1;
+    padding: 0.15rem 0.35rem; border-radius: 0.3rem;
+}
+.wlext-maker-menu-btn:hover { background: var(--bg-hover, #eee); color: var(--text-primary, #222); }
+/* FANZA リストページへのリンク (リストページURLが登録されているときだけ表示) */
+.wlext-maker-fanza {
+    font-size: 0.95rem; font-weight: 800; letter-spacing: 0.02em;
+    color: #e50914; text-decoration: none; white-space: nowrap;
+}
+.wlext-maker-fanza:hover { text-decoration: underline; }
+.wlext-maker-readonly {
+    padding: 0.45rem 0.6rem; border-radius: 0.35rem;
+    background: var(--bg-secondary, #f4f4f4); font-size: 0.9rem; word-break: break-all;
+}
+@media (max-width: 640px) {
+    .wlext-maker-row { grid-template-columns: 84px minmax(0, 1fr); }
+    .wlext-maker-img { width: 84px; }
+    .wlext-maker-side { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
+}
+
 /* ---- スクリーンショット枚数バッジ (検索カード: フォルダ名の右) ---- */
 .wlext-ss-badge {
     display: inline-flex; align-items: center; gap: 2px;
@@ -933,6 +999,12 @@
 .wlext-sel-menu-item:hover .wlext-ico { color: var(--accent, #007acc); }
 .wlext-sel-menu-item.danger { color: var(--status-error, #e51400); border-top: 1px solid var(--border-primary, #eee); }
 .wlext-sel-menu-item.danger:hover { background: rgba(229,20,0,0.1); }
+
+.wlext-sel-del-names {
+    margin-top: 0.3rem; padding: 0.5rem 0.7rem; max-height: 9rem; overflow-y: auto;
+    background: var(--bg-secondary, #f4f4f4); border-radius: 0.35rem;
+    font-size: 0.85rem; word-break: break-all;
+}
 
 /* ---- トースト ---- */
 .wlext-toast-wrap {

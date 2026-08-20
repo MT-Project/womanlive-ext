@@ -11,6 +11,7 @@ function pick(o, keys) { const r = {}; keys.forEach(k => { r[k] = (o && o[k] !==
 
 const META_KEYS = ['hash', 'rating', 'display_name', 'model_no', 'release_date', 'series', 'maker', 'label', 'directors', 'genres', 'performers', 'updated_at'];
 const PERF_KEYS = ['id', 'name', 'furigana', 'birthday', 'height', 'weight', 'bust', 'cup', 'waist', 'hip', 'blood_type', 'aliases', 'rating', 'tags', 'created_at', 'updated_at'];
+const MAKER_KEYS = ['name', 'furigana', 'catch_copy', 'list_url', 'updated_at'];
 
 // GET /ext/api/backup/export
 exports.exportAll = (req, res) => {
@@ -27,6 +28,7 @@ exports.exportAll = (req, res) => {
             video_meta: db.prepare('SELECT * FROM ext_video_meta').all(),
             performers: db.prepare('SELECT * FROM ext_performers').all().map(p => ({ ...p, image: b64enc(p.image) })),
             video_cover: db.prepare('SELECT * FROM ext_video_cover').all().map(c => ({ ...c, image: b64enc(c.image) })),
+            makers: db.prepare('SELECT * FROM ext_makers').all().map(m => ({ ...m, image: b64enc(m.image) })),
             bookmark_folders: db.prepare('SELECT * FROM ext_bookmark_folders').all(),
             bookmarks: db.prepare('SELECT * FROM ext_bookmarks').all(),
         };
@@ -77,6 +79,16 @@ exports.importAll = (req, res) => {
                 const s = db.prepare('INSERT OR REPLACE INTO ext_video_cover (hash,image,updated_at) VALUES (@hash,@image,@updated_at)');
                 d.video_cover.forEach(c => s.run({ hash: c.hash, image: b64dec(c.image), updated_at: c.updated_at || null }));
                 stats.video_cover = d.video_cover.length;
+            }
+
+            // メーカー情報 (画像含む)
+            db.prepare('DELETE FROM ext_makers').run();
+            if (Array.isArray(d.makers)) {
+                const s = db.prepare(`INSERT OR REPLACE INTO ext_makers
+                    (name,furigana,catch_copy,list_url,image,updated_at)
+                    VALUES (@name,@furigana,@catch_copy,@list_url,@image,@updated_at)`);
+                d.makers.forEach(m => s.run({ ...pick(m, MAKER_KEYS), image: b64dec(m.image) }));
+                stats.makers = d.makers.length;
             }
 
             // ブックマーク

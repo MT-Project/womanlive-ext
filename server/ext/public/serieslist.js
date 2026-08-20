@@ -22,6 +22,7 @@
         page.appendChild(container);
         document.body.appendChild(page);
         window.scrollTo(0, 0);
+        WL.setDocTitle('シリーズ一覧');
 
         let list;
         try { list = await WL.api.seriesList(); }
@@ -78,11 +79,12 @@
             }
 
             const url = '/search?q=' + encodeURIComponent('@series:"' + s.name + '"');
-            return WL.navA(url, { class: 'wlext-series-card', title: '「' + s.name + '」で検索' }, [thumb, nameEl, ratingEl]);
+            return WL.navA(url, { class: 'wlext-series-card', title: '「' + s.name + '」で検索', 'data-wl-target': s.name, 'data-wl-name': s.name }, [thumb, nameEl, ratingEl]);
         }
 
         sorter.paint();
         renderGrid();
+        WL.listSelect({ page, kind: 'series', kindLabel: 'シリーズ' });
     }
 
     WL.onEnsure(ensure);

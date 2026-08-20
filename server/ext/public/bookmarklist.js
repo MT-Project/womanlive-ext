@@ -22,6 +22,7 @@
         page.appendChild(container);
         document.body.appendChild(page);
         window.scrollTo(0, 0);
+        WL.setDocTitle('ブックマーク');
 
         const state = { sort: 'name', dir: 'asc' };
         let list = [];

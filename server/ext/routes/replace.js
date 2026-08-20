@@ -20,22 +20,26 @@ const KINDS = [
     { key: 'label', label: 'レーベル' },
 ];
 const COLUMN_KINDS = { series: 'series', maker: 'maker', label: 'label' };
+// 一覧ページ(シリーズ/出演者/タグ/ジャンル)から一括削除できる種類
+const DELETABLE_KINDS = ['series', 'performer', 'tag', 'genre'];
 
 exports.kinds = (req, res) => res.json(KINDS);
 
 // settings に入っている文字列配列(JSON)の要素を置換する。
+// after が null のときはその要素を取り除く(削除)。
 // タグレイアウトの見出し行(# 始まり)は対象外。
 function replaceInStringArraySetting(key, before, after, skipHeadings) {
     const arr = getSetting(key, null);
     if (!Array.isArray(arr)) return 0;
     let n = 0;
-    const next = arr.map(v => {
+    let next = arr.map(v => {
         const s = String(v == null ? '' : v);
         if (skipHeadings && /^[#＃]/.test(s.trim())) return v;
         if (s !== before) return v;
         n++;
         return after;
     });
+    if (after === null) next = next.filter(v => v !== null);
     if (n) setSetting(key, next);
     return n;
 }
@@ -110,6 +114,79 @@ exports.replace = (req, res) => {
     } catch (e) {
         if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext metadata replace]', e);
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// =============================================================
+// 一覧ページからの一括削除 (選択した値を全動画のメタデータから取り除く)
+// =============================================================
+
+// 本家 metadata.tags は前後を改行で囲む形式なので、"改行+名前+改行" を
+// 改行1つに潰せばその要素だけが消える (renameTag と同じ考え方)。
+function deleteTag(name) {
+    const info = db.prepare(`
+        UPDATE metadata
+        SET tags = REPLACE(tags, '\n' || ? || '\n', '\n')
+        WHERE tags LIKE '%\n' || ? || '\n%'
+    `).run(name, name);
+    // 最後の1件を消すと改行だけが残るので、本家の「タグなし」表現(NULL)へ戻す
+    db.prepare("UPDATE metadata SET tags = NULL WHERE tags = '\n' OR tags = ''").run();
+
+    // 置換と同じく、本家のプリセットと拡張のグループレイアウトからも取り除く
+    // (残すと、動画から消えたタグがタグ入力の候補に出続ける)
+    replaceInStringArraySetting(PRESET_TAGS_KEY, name, null, false);
+    replaceInStringArraySetting(TAG_LAYOUT_KEY, name, null, true);
+    return info.changes;
+}
+
+// 改行区切りのリスト列(ジャンル/出演者)から、要素の完全一致で取り除く
+function deleteFromListColumn(column, value) {
+    const rows = db.prepare(`SELECT hash, ${column} AS val FROM ext_video_meta WHERE ${column} IS NOT NULL`).all();
+    const upd = db.prepare(`UPDATE ext_video_meta SET ${column} = ?, updated_at = CURRENT_TIMESTAMP WHERE hash = ?`);
+    let n = 0;
+    rows.forEach(r => {
+        const list = splitList(r.val);
+        if (!list.includes(value)) return;
+        const next = list.filter(v => v !== value);
+        upd.run(next.length ? joinList(next) : null, r.hash);
+        n++;
+    });
+    return n;
+}
+
+// 出演者は動画側の紐づけを外したうえで、出演者そのものも消す
+// (紐づけだけ外すと 0本の出演者が一覧に残り続けるため)
+function deletePerformer(id) {
+    const n = deleteFromListColumn('performers', String(id));
+    db.prepare('DELETE FROM ext_performers WHERE id = ?').run(id);
+    return n;
+}
+
+// POST /ext/api/metadata/delete  { kind, targets: [...] }
+//   targets は kind=performer のとき出演者id、それ以外は名前
+exports.remove = (req, res) => {
+    try {
+        const b = req.body || {};
+        const kind = String(b.kind || '').trim();
+        const targets = Array.isArray(b.targets) ? b.targets : [];
+
+        if (!DELETABLE_KINDS.includes(kind)) return res.status(400).json({ error: '削除するメタデータ種が不正です' });
+        const clean = kind === 'performer'
+            ? [...new Set(targets.map(v => parseInt(v, 10)).filter(v => Number.isInteger(v)))]
+            : [...new Set(targets.map(v => String(v == null ? '' : v).trim()).filter(Boolean))];
+        if (!clean.length) return res.status(400).json({ error: '削除する対象がありません' });
+
+        const videos = db.transaction(() => clean.reduce((sum, t) => {
+            if (kind === 'tag') return sum + deleteTag(t);
+            if (kind === 'genre') return sum + deleteFromListColumn('genres', t);
+            if (kind === 'performer') return sum + deletePerformer(t);
+            return sum + db.prepare('UPDATE ext_video_meta SET series = NULL, updated_at = CURRENT_TIMESTAMP WHERE series = ?').run(t).changes;
+        }, 0))();
+
+        res.json({ success: true, kind, deleted: clean.length, videos });
+    } catch (e) {
+        console.error('[ext metadata delete]', e);
         res.status(500).json({ error: e.message });
     }
 };

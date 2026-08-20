@@ -71,12 +71,41 @@ const FLOORS = [
     { service: 'mono', floor: 'dvd' }
 ];
 
-async function callDmm(apiId, affId, fl, extraParam) {
-    const url = `https://api.dmm.com/affiliate/v3/ItemList?api_id=${encodeURIComponent(apiId)}&affiliate_id=${encodeURIComponent(affId)}&site=FANZA&service=${fl.service}&floor=${fl.floor}&hits=20&sort=date&${extraParam}&output=json`;
-    const r = await fetch(url);
+// DMM アフィリエイト API の共通呼び出し (ItemList / FloorList / MakerSearch)
+const auth = (apiId, affId) => `api_id=${encodeURIComponent(apiId)}&affiliate_id=${encodeURIComponent(affId)}`;
+async function dmmApi(path, params) {
+    const r = await fetch(`https://api.dmm.com/affiliate/v3/${path}?${params}&output=json`);
     if (!r.ok) throw new Error('DMM API エラー (' + r.status + ')');
     const data = await r.json();
     return data.result || {};
+}
+
+function callDmm(apiId, affId, fl, extraParam) {
+    return dmmApi('ItemList', `${auth(apiId, affId)}&site=FANZA&service=${fl.service}&floor=${fl.floor}&hits=20&sort=date&${extraParam}`);
+}
+
+// 品番から商品を探す。売り場ごとに次の順で試し、最初に見つかったものを返す。
+//   1) 品番そのままをキーワード検索 (仕様どおりの引き方)
+//   2) cid 厳密一致
+//   3) cid 形の文字列をキーワード検索
+// 3 は content_id に接頭辞が付く作品のための逃げ道。例: TOTTE-283 の content_id は
+// "1totte00283" で、1(ハイフン付き品番は索引に無い)・2(接頭辞を知らない)のどちらでも 0件になるが、
+// "totte00283" をキーワードにすると 1件で見つかる。
+async function findItems(apiId, affId, pn) {
+    const cid = toCid(pn);
+    const attempts = [
+        { label: 'keyword', param: 'keyword=' + encodeURIComponent(pn) },
+        cid ? { label: 'cid', param: 'cid=' + encodeURIComponent(cid) } : null,
+        cid ? { label: 'cid-keyword', param: 'keyword=' + encodeURIComponent(cid) } : null,
+    ].filter(Boolean);
+
+    for (const fl of FLOORS) {
+        for (const a of attempts) {
+            const r = await callDmm(apiId, affId, fl, a.param);
+            if (r.items && r.items.length > 0) return { result: r, method: fl.floor + '/' + a.label };
+        }
+    }
+    return { result: {}, method: '' };
 }
 
 // GET /ext/api/dmm/search?id=<videoId>
@@ -96,23 +125,7 @@ exports.search = async (req, res) => {
         const pn = meta && meta.model_no ? meta.model_no.trim() : '';
         if (!pn) return res.status(400).json({ error: '品番が設定されていません。先に品番を登録してください。' });
 
-        // 売り場ごとに 1)キーワード検索(仕様どおり品番をキーワードに) →
-        // 2) 0件なら cid 厳密一致 の順で試し、最初に見つかったものを使う。
-        const cid = toCid(pn);
-        let result = {}, method = '';
-        for (const fl of FLOORS) {
-            const byKeyword = await callDmm(apiId, affId, fl, 'keyword=' + encodeURIComponent(pn));
-            if (byKeyword.items && byKeyword.items.length > 0) {
-                result = byKeyword; method = fl.floor + '/keyword'; break;
-            }
-            if (cid) {
-                const byCid = await callDmm(apiId, affId, fl, 'cid=' + encodeURIComponent(cid));
-                if (byCid.items && byCid.items.length > 0) {
-                    result = byCid; method = fl.floor + '/cid'; break;
-                }
-            }
-        }
-
+        const { result, method } = await findItems(apiId, affId, pn);
         const items = (result.items || []).map(mapItem);
         res.json({
             status: result.status,
@@ -152,6 +165,11 @@ exports.apply = async (req, res) => {
         // 既存メタ (品番・評価は維持。DMM項目は上書き)
         const cur = db.prepare('SELECT * FROM ext_video_meta WHERE hash = ?').get(hash) || {};
 
+        // DMM 側が空だった項目は既存の値を残す (一括編集 bulk.meta と同じ考え方)。
+        // 確認画面は値のある項目しか出さないので、そこに出ていない項目を消さないためでもある。
+        // 例: 出演者情報を持たない商品を反映すると、手で入れた出演者が消えてしまっていた。
+        const sv = (v) => String(v == null ? '' : v).trim();
+
         // ジャンルだけは上書きせず、既存 + DMM の和集合にする (手で足したジャンルを消さない)
         const genres = splitList(cur.genres);
         (item.genres || []).forEach(g => {
@@ -170,15 +188,15 @@ exports.apply = async (req, res) => {
         `).run(
             hash,
             cur.rating || 0,
-            (item.title || '').trim() || null,
+            sv(item.title) || cur.display_name || null,
             cur.model_no || null,
-            (item.date || '').trim() || null,
-            (item.series || '').trim() || null,
-            (item.maker || '').trim() || null,
-            (item.label || '').trim() || null,
-            joinList(item.directors || []),
+            sv(item.date) || cur.release_date || null,
+            sv(item.series) || cur.series || null,
+            sv(item.maker) || cur.maker || null,
+            sv(item.label) || cur.label || null,
+            (item.directors || []).length ? joinList(item.directors) : (cur.directors || null),
             joinList(genres),
-            joinList(performerIds)
+            performerIds.length ? joinList(performerIds) : (cur.performers || null)
         );
 
         // カバー画像: 未設定かつ URL があれば取得して保存
@@ -193,5 +211,85 @@ exports.apply = async (req, res) => {
     } catch (e) {
         console.error('[ext dmm apply]', e);
         res.status(500).json({ error: e.message });
+    }
+};
+
+// =============================================================
+// メーカー検索 (MakerSearch API) — メーカー一覧ページの「メーカー情報取得」
+//  MakerSearch は floor_id が必須で、キーワード検索が無い(頭文字 initial での絞り込みのみ)。
+//  そのため 動画(digital/videoa) のメーカーを全件取ってプロセス内にキャッシュし、
+//  名前の完全一致/部分一致でこちらから絞り込む。
+// =============================================================
+const MAKER_CACHE_MS = 60 * 60 * 1000;   // キャッシュの寿命 (1時間)
+const MAKER_HITS = 500;                  // MakerSearch の 1回あたり最大件数
+const MAKER_MAX = 20000;                 // 暴走防止の上限
+let makerCache = null;                   // { at, list }
+
+// FANZA 動画(digital/videoa)のフロアID。MakerSearch に必須。
+async function videoFloorId(apiId, affId) {
+    const r = await dmmApi('FloorList', auth(apiId, affId));
+    for (const site of r.site || []) {
+        for (const svc of site.service || []) {
+            if (svc.code !== 'digital') continue;
+            for (const fl of svc.floor || []) if (fl.code === 'videoa') return fl.id;
+        }
+    }
+    throw new Error('FANZA 動画のフロアIDを取得できませんでした');
+}
+
+async function allMakers(apiId, affId) {
+    if (makerCache && Date.now() - makerCache.at < MAKER_CACHE_MS) return makerCache.list;
+    const floorId = await videoFloorId(apiId, affId);
+    const list = [];
+    for (let offset = 1; offset <= MAKER_MAX; offset += MAKER_HITS) {
+        const r = await dmmApi('MakerSearch', `${auth(apiId, affId)}&floor_id=${encodeURIComponent(floorId)}&hits=${MAKER_HITS}&offset=${offset}`);
+        const arr = r.maker || [];
+        arr.forEach(m => list.push({ name: m.name || '', ruby: m.ruby || '', listUrl: m.list_url || '' }));
+        if (!arr.length || list.length >= Number(r.total_count || 0)) break;
+    }
+    makerCache = { at: Date.now(), list };
+    return list;
+}
+
+// 全角英数・空白・大文字小文字の違いを無視して突き合わせる
+function normName(s) {
+    return String(s == null ? '' : s)
+        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+        .replace(/[\s　]+/g, '')
+        .toLowerCase();
+}
+
+const CANDIDATE_LIMIT = 50;
+
+// GET /ext/api/dmm/makers?name=<メーカー名>
+//   { total, exact: [...], candidates: [...], limited }
+exports.makerSearch = async (req, res) => {
+    try {
+        const apiId = getSetting('ext_dmm_api_id', '');
+        const affId = getSetting('ext_dmm_affiliate_id', '');
+        if (!apiId || !affId) {
+            return res.status(400).json({ error: 'DMM API ID / アフィリエイトID が未設定です。設定画面で登録してください。' });
+        }
+        const name = String(req.query.name || '').trim();
+        if (!name) return res.status(400).json({ error: 'メーカー名がありません' });
+
+        const list = await allMakers(apiId, affId);
+        const key = normName(name);
+        const exact = list.filter(m => normName(m.name) === key);
+        // 完全一致が無いときだけ候補を返す (部分一致は双方向で見る: 「〇〇」⇔「〇〇 Premium」)
+        const hits = exact.length ? [] : list.filter(m => {
+            const n = normName(m.name);
+            return n && (n.includes(key) || key.includes(n));
+        });
+
+        res.json({
+            total: list.length,
+            exact,
+            candidates: hits.slice(0, CANDIDATE_LIMIT),
+            limited: hits.length > CANDIDATE_LIMIT
+        });
+    } catch (e) {
+        console.error('[ext dmm makers]', e);
+        res.status(502).json({ error: 'メーカー検索に失敗しました: ' + e.message });
     }
 };

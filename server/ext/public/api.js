@@ -33,6 +33,7 @@
         // DMM(FANZA) 商品検索
         dmmSearch: (id) => req('/ext/api/dmm/search?id=' + encodeURIComponent(id)),
         dmmApply: (id, item) => req('/ext/api/dmm/apply', jsonOpts('POST', { id, item })),
+        dmmMakerSearch: (name) => req('/ext/api/dmm/makers?name=' + encodeURIComponent(name)),
 
         // 動画メタ
         getMeta: (id) => req('/ext/api/video/' + id + '/meta'),
@@ -49,6 +50,8 @@
         // メタデータの一括置換
         replaceKinds: () => req('/ext/api/metadata/replace-kinds'),
         replaceMetadata: (kind, before, after) => req('/ext/api/metadata/replace', jsonOpts('POST', { kind, before, after })),
+        // 一覧ページからの一括削除 (targets は performer なら id、それ以外は名前)
+        deleteMetadataValues: (kind, targets) => req('/ext/api/metadata/delete', jsonOpts('POST', { kind, targets })),
 
         // 出演者
         searchPerformers: (q) => req('/ext/api/performers?q=' + encodeURIComponent(q || '')),
@@ -56,6 +59,12 @@
         cleanupUnusedPerformers: (dryRun) => req('/ext/api/performers/cleanup-unused', jsonOpts('POST', { dryRun })),
         releaseCalendar: () => req('/ext/api/release-calendar'),
         seriesList: () => req('/ext/api/series'),
+
+        // メーカー一覧 / メーカー情報
+        makersList: () => req('/ext/api/makers'),
+        saveMaker: (m) => req('/ext/api/maker', jsonOpts('PUT', m)),
+        makerImageUrl: (name, bust) => '/ext/api/maker/image?name=' + encodeURIComponent(name) + (bust ? ('&t=' + bust) : ''),
+        setMakerImage: (name, dataUrl) => req('/ext/api/maker/image', jsonOpts('POST', { name, image: dataUrl })),
 
         // タグ一覧 / タグサムネイル
         tagsList: () => req('/ext/api/tags'),

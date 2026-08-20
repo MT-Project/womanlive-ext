@@ -46,6 +46,14 @@
     WL.nameCompare = NK.nameCompare;
 
     /* ---------- 一覧 共通部品 ---------- */
+    // 画像が無いカード(タグ/ジャンル/メーカー)の既定背景。名前から色を決めるので毎回同じ色になる。
+    WL.colorFor = function (s) {
+        let n = 0;
+        s = String(s || '');
+        for (let i = 0; i < s.length; i++) n = (n * 31 + s.charCodeAt(i)) >>> 0;
+        return 'hsl(' + (n % 360) + ', 42%, 40%)';
+    };
+
     // 検索カード内のフォルダ名要素。プロパティ名ベースの属性セレクタ(folderName_*)を優先し、
     // 本体の構造変化時は nowrap+ellipsis のテキスト div にフォールバック(拡張の注入要素は除外)。
     WL.findFolderName = function (card) {
@@ -168,6 +176,9 @@
     /* ---------- ナビゲーション ---------- */
     // 拡張からの遷移はフルリロードで行い、確実に React 側 (検索) や拡張側 (出演者) に届ける
     WL.navigate = (url) => { window.location.assign(url); };
+    // ページタイトル。本家の各ページと同じ "<名前> - WomanLive" 形式にする
+    // (本家は自分のルートでしか title を設定しないため、拡張ページは自前で名乗る)
+    WL.setDocTitle = (name) => { document.title = name ? name + ' - WomanLive' : 'WomanLive'; };
     WL.searchHref = (token) => '/search?q=' + encodeURIComponent(token);
     WL.searchBy = (token) => { WL.navigate(WL.searchHref(token)); };
     WL.openPerformer = (id) => { WL.navigate('/performer/' + id); };

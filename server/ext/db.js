@@ -47,6 +47,16 @@ function initSchema() {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- メーカー一覧ページ用のメーカー情報 (メーカー名をキーに保存)
+        CREATE TABLE IF NOT EXISTS ext_makers (
+            name       TEXT PRIMARY KEY COLLATE NOCASE,
+            furigana   TEXT,                  -- 読み仮名
+            catch_copy TEXT,                  -- キャッチコピー
+            list_url   TEXT,                  -- FANZA リストページURL
+            image      BLOB,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         -- ブックマーク フォルダ
         CREATE TABLE IF NOT EXISTS ext_bookmark_folders (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,

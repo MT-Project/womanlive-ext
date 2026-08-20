@@ -34,6 +34,7 @@
         page.appendChild(container);
         document.body.appendChild(page);
         window.scrollTo(0, 0);
+        WL.setDocTitle('出演者一覧');
 
         let all;
         try { all = await WL.api.performersAll(); }
@@ -160,7 +161,7 @@
             const age = ageLabel(p.birthday);
             const meta = metaLine(p);
 
-            return WL.navA('/performer/' + p.id, { class: 'wlext-plist-card' + (p.dup ? ' dup' : ''), title: '出演者ページを開く' }, [
+            return WL.navA('/performer/' + p.id, { class: 'wlext-plist-card' + (p.dup ? ' dup' : ''), title: '出演者ページを開く', 'data-wl-target': p.id, 'data-wl-name': p.name || '(無名)' }, [
                 imgHost,
                 h('div', { class: 'wlext-plist-name' }, p.name || '(無名)'),
                 p.furigana ? h('div', { class: 'wlext-plist-furi' }, p.furigana) : null,
@@ -185,6 +186,7 @@
 
         sorter.paint();
         renderGrid();
+        WL.listSelect({ page, kind: 'performer', kindLabel: '出演者' });
     }
 
     WL.onEnsure(ensure);

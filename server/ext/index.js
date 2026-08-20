@@ -23,6 +23,7 @@ const bulk = require('./routes/bulk');
 const frame = require('./routes/frame');
 const maintenance = require('./routes/maintenance');
 const replace = require('./routes/replace');
+const makers = require('./routes/makers');
 const createInject = require('./inject');
 
 module.exports = function setupExt(app) {
@@ -88,10 +89,12 @@ module.exports = function setupExt(app) {
     // -- メタデータの一括置換 (本家のタグ置換を置き換える)
     app.get('/ext/api/metadata/replace-kinds', replace.kinds);
     app.post('/ext/api/metadata/replace', replace.replace);
+    app.post('/ext/api/metadata/delete', replace.remove);
 
-    // -- DMM(FANZA) 商品検索
+    // -- DMM(FANZA) 商品検索 / メーカー検索
     app.get('/ext/api/dmm/search', dmm.search);
     app.post('/ext/api/dmm/apply', dmm.apply);
+    app.get('/ext/api/dmm/makers', dmm.makerSearch);
 
     // -- 動画の拡張メタデータ
     app.get('/ext/api/video/:id/meta', meta.getMeta);
@@ -117,6 +120,12 @@ module.exports = function setupExt(app) {
     // -- 動画単体のタグ 取得/設定
     app.get('/ext/api/video/:id/tags', tags.getVideoTags);
     app.put('/ext/api/video/:id/tags', tags.setVideoTags);
+
+    // -- メーカー一覧 / メーカー情報
+    app.get('/ext/api/makers', makers.list);
+    app.put('/ext/api/maker', makers.update);
+    app.get('/ext/api/maker/image', makers.getImage);
+    app.post('/ext/api/maker/image', makers.setImage);
 
     // -- スクリーンショット枚数
     app.get('/ext/api/screenshots/counts', screenshots.counts);

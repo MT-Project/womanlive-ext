@@ -26,6 +26,7 @@
         const container = h('div', { class: 'wlext-pp-container' }, h('div', null, '読み込み中...'));
         page.appendChild(container);
         document.body.appendChild(page);
+        WL.setDocTitle('出演者');
 
         let perf;
         try { perf = await WL.api.getPerformer(id); }
@@ -34,6 +35,7 @@
             container.appendChild(h('div', null, '出演者が見つかりません。'));
             return;
         }
+        WL.setDocTitle(perf.name || '出演者');
 
         container.innerHTML = '';
 

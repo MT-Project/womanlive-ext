@@ -18,13 +18,6 @@
     }
 
     // タグ名から安定した背景色を生成 (無地背景)
-    function colorFor(s) {
-        let n = 0;
-        s = String(s || '');
-        for (let i = 0; i < s.length; i++) n = (n * 31 + s.charCodeAt(i)) >>> 0;
-        return 'hsl(' + (n % 360) + ', 42%, 40%)';
-    }
-
     async function render() {
         const page = h('div', { class: 'wlext-tags-page wlext-ext-page' });
         page.appendChild(WL.pageHeader());
@@ -32,6 +25,7 @@
         page.appendChild(container);
         document.body.appendChild(page);
         window.scrollTo(0, 0);
+        WL.setDocTitle('タグ一覧');
 
         let list, presets;
         try {
@@ -112,7 +106,7 @@
                     im.src = WL.api.tagThumbUrl(tag.name, Date.now());
                     thumb.appendChild(im);
                 } else {
-                    thumb.style.background = colorFor(tag.name);
+                    thumb.style.background = WL.colorFor(tag.name);
                     thumb.appendChild(h('div', { class: 'wlext-tag-thumb-label' }, tag.name));
                 }
                 // 動画本数: サムネイル右上の角丸バッジ (シリーズ一覧と共通)
@@ -219,11 +213,12 @@
             paintThumb();
             const nameEl = h('div', { class: 'wlext-series-name' }, tag.name);
             const url = '/search?q=' + encodeURIComponent('@tag:"' + tag.name + '"');
-            return WL.navA(url, { class: 'wlext-series-card wlext-tag-card', title: '「' + tag.name + '」で検索' }, [thumb, nameEl]);
+            return WL.navA(url, { class: 'wlext-series-card wlext-tag-card', title: '「' + tag.name + '」で検索', 'data-wl-target': tag.name, 'data-wl-name': tag.name }, [thumb, nameEl]);
         }
 
         sorter.paint();
         renderGrid();
+        WL.listSelect({ page, kind: 'tag', kindLabel: 'タグ' });
     }
 
     WL.onEnsure(ensure);
