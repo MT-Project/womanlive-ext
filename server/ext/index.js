@@ -104,6 +104,7 @@ module.exports = function setupExt(app) {
     // -- 拡張検索
     app.get('/ext/api/search', search.search);
     app.get('/ext/api/fullsearch', fullsearch.fullSearch);
+    app.get('/ext/api/search/facets', search.facets);
     app.get('/ext/api/release-calendar', search.releaseCalendar);
     app.get('/ext/api/series', search.seriesList);
 

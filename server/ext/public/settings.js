@@ -454,10 +454,10 @@
             try {
                 const items = await WL.api.fsList(path);
                 if (!items.length) listEl.appendChild(h('div', { style: { padding: '0.6rem', color: 'var(--text-secondary,#999)' } }, '(サブフォルダなし)'));
-                items.forEach(it => listEl.appendChild(item('📁 ' + it.name, async () => {
-                    try { const r = await WL.api.fsResolve(path, it.path || it.name); load(r.path); }
-                    catch (e) { load(it.path); }
-                })));
+                // 本家の /api/fs/list は絶対パスを返すので、そのまま降りる。
+                // /api/fs/resolve は path.join(base, target) するため、絶対パスを渡すと
+                // "D:\" + "D:\Cover" = "D:\D:\Cover" と、ドライブレターが二重に入る。
+                items.forEach(it => listEl.appendChild(item('📁 ' + it.name, () => load(it.path || it.name))));
             } catch (e) { listEl.appendChild(h('div', { style: { padding: '0.6rem', color: 'var(--status-error,#e51400)' } }, '読み込み失敗: ' + e.message)); }
         }
 

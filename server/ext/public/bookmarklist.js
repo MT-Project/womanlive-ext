@@ -69,7 +69,9 @@
         }
 
         function card(s) {
-            const url = '/search?q=' + encodeURIComponent('@bookmark:' + s.id);
+            // フォルダ名で検索する。名前に " を含むとトークンが壊れるので、そのときだけ従来のID指定にする
+            const token = String(s.name || '').includes('"') ? ('@bookmark:' + s.id) : ('@bookmark:"' + s.name + '"');
+            const url = '/search?q=' + encodeURIComponent(token);
             const thumb = WL.navA(url, { class: 'wlext-video-thumb', title: '開く' });
             if (s.thumbId) thumb.appendChild(h('img', { src: '/api/video/' + s.thumbId + '/thumbnail', loading: 'lazy', alt: s.name }));
             else thumb.appendChild(h('div', { class: 'noimg' }, 'NO IMAGE'));

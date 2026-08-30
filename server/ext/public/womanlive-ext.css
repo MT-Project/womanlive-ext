@@ -826,6 +826,52 @@
     .wlext-maker-side { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
 }
 
+/* ---- 検索結果のサイドメニュー (絞り込み) ---- */
+.wlext-facets {
+    position: fixed; left: 0; bottom: 0; width: 240px; z-index: 500;
+    display: flex; flex-direction: column;
+    background: var(--bg-secondary, #fafafa);
+    border-right: 1px solid var(--border-primary, #e4e4e4);
+}
+/* 本家の結果一覧をサイドメニューのぶんだけ右へ寄せる (幅の狭い画面ではメニューごと隠す) */
+body.wlext-facets-on #root [class*="content_"] { padding-left: 258px !important; }
+.wlext-facets-head {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.6rem 0.8rem; font-size: 0.85rem; font-weight: 600;
+    color: var(--text-primary, #222);
+    border-bottom: 1px solid var(--border-primary, #e4e4e4);
+}
+.wlext-facets-body { flex: 1; overflow-y: auto; padding: 0.4rem 0 1rem; }
+.wlext-facets-msg { padding: 0.8rem; font-size: 0.8rem; color: var(--text-secondary, #888); }
+.wlext-facet-section { padding: 0.5rem 0.5rem 0.7rem; border-bottom: 1px solid var(--border-primary, #ececec); }
+.wlext-facet-section:last-child { border-bottom: none; }
+.wlext-facet-title {
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.2rem 0.3rem 0.4rem; font-size: 0.8rem; font-weight: 600;
+    color: var(--text-secondary, #888);
+}
+.wlext-facet-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+    padding: 0.28rem 0.45rem; border-radius: 0.3rem; cursor: pointer;
+    font-size: 0.82rem; color: var(--text-primary, #222);
+}
+.wlext-facet-item:hover { background: var(--bg-hover, #ececec); }
+.wlext-facet-item.active { background: var(--accent, #007acc); color: #fff; }
+.wlext-facet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wlext-facet-count { flex-shrink: 0; font-size: 0.72rem; color: var(--text-secondary, #888); font-variant-numeric: tabular-nums; }
+.wlext-facet-item.active .wlext-facet-count { color: #fff; }
+.wlext-facet-rest { display: none; }
+.wlext-facet-rest.open { display: block; }
+.wlext-facet-more {
+    padding: 0.3rem 0.45rem; font-size: 0.75rem; cursor: pointer;
+    color: var(--accent, #007acc);
+}
+.wlext-facet-more:hover { text-decoration: underline; }
+@media (max-width: 900px) {
+    .wlext-facets { display: none; }
+    body.wlext-facets-on #root [class*="content_"] { padding-left: 22px !important; }
+}
+
 /* ---- スクリーンショット枚数バッジ (検索カード: フォルダ名の右) ---- */
 .wlext-ss-badge {
     display: inline-flex; align-items: center; gap: 2px;

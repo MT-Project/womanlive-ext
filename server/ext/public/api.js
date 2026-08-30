@@ -59,6 +59,8 @@
         cleanupUnusedPerformers: (dryRun) => req('/ext/api/performers/cleanup-unused', jsonOpts('POST', { dryRun })),
         releaseCalendar: () => req('/ext/api/release-calendar'),
         seriesList: () => req('/ext/api/series'),
+        // 検索結果の絞り込み候補 (サイドメニュー)
+        searchFacets: (q) => req('/ext/api/search/facets?q=' + encodeURIComponent(q || '')),
 
         // メーカー一覧 / メーカー情報
         makersList: () => req('/ext/api/makers'),

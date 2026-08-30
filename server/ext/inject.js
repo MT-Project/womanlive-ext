@@ -24,6 +24,7 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/dispname.js',
     '/ext/assets/videometa.js',
     '/ext/assets/searchenh.js',
+    '/ext/assets/searchfacets.js',
     '/ext/assets/listselect.js',
     '/ext/assets/performer.js',
     '/ext/assets/performerlist.js',

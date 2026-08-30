@@ -4,7 +4,7 @@
 // /api/videos の代わりにこのエンドポイントを呼びます。
 // 戻り値の形は /api/videos と同じ { videos, totalCount } に揃えます。
 // =============================================================
-const { db, SORT_MAP } = require('../db');
+const { db, splitList, SORT_MAP } = require('../db');
 
 const VIDEO_FIELDS = `
     f.id, f.path, f.filename, f.size,
@@ -78,10 +78,16 @@ function buildConditions(tokens) {
             case 'release':
                 if (value === 'none') where.push("(e.release_date IS NULL OR e.release_date = '')");
                 break;
-            case 'bookmark': // ブックマークフォルダID
-                where.push('f.hash IN (SELECT hash FROM ext_bookmarks WHERE folder_id = ?)');
-                params.push(parseInt(value, 10));
+            case 'bookmark': {
+                // ブックマークフォルダ名で指定する(同名のフォルダがあれば両方が対象)。
+                // 名前に一致しなければ旧形式のフォルダIDとしても解釈する(古いリンクを壊さないため)。
+                const ids = db.prepare('SELECT id FROM ext_bookmark_folders WHERE name = ? COLLATE NOCASE').all(value).map(r => r.id);
+                if (!ids.length) { const n = parseInt(value, 10); if (Number.isInteger(n)) ids.push(n); }
+                if (!ids.length) { where.push('1 = 0'); break; }   // 該当なしは0件
+                where.push(`f.hash IN (SELECT hash FROM ext_bookmarks WHERE folder_id IN (${ids.map(() => '?').join(',')}))`);
+                ids.forEach(i => params.push(i));
                 break;
+            }
             // --- 除外 (含まない) 検索 ---
             case 'notmaker': where.push("IFNULL(e.maker,'') != ? COLLATE NOCASE"); params.push(value); break;
             case 'notseries': where.push("IFNULL(e.series,'') != ? COLLATE NOCASE"); params.push(value); break;
@@ -192,6 +198,62 @@ exports.releaseCalendar = (req, res) => {
         res.json({ months, uncategorized });
     } catch (e) {
         console.error('[ext release-calendar]', e);
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// 検索結果の絞り込み候補 (サイドメニュー用)
+//   GET /ext/api/search/facets?q=...
+//   今の検索条件に合う動画すべてを対象に、ジャンル/タグ/メーカー/出演者/シリーズを数える。
+//   件数の多い順に並べ、そのまま検索トークンに使える値(value)と表示名(label)を返す。
+//   出演者だけは検索が id 指定なので value=id / label=氏名 と分かれる。
+exports.facets = (req, res) => {
+    try {
+        const tokens = tokenize(req.query.q || '');
+        const { where, params } = buildConditions(tokens);
+        const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
+
+        const rows = db.prepare(`
+            SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers
+            FROM files f
+            JOIN metadata m ON f.hash = m.hash
+            LEFT JOIN ext_video_meta e ON e.hash = f.hash
+            ${whereSql}
+        `).all(...params);
+
+        const counts = { genre: new Map(), tag: new Map(), maker: new Map(), performer: new Map(), series: new Map() };
+        const bump = (kind, v) => { const s = String(v == null ? '' : v).trim(); if (s) counts[kind].set(s, (counts[kind].get(s) || 0) + 1); };
+        rows.forEach(r => {
+            splitList(r.genres).forEach(v => bump('genre', v));
+            splitList(r.tags).forEach(v => bump('tag', v));
+            splitList(r.performers).forEach(v => bump('performer', v));
+            bump('maker', r.maker);
+            bump('series', r.series);
+        });
+
+        // 出演者は id で数えているので氏名を引く
+        const names = new Map();
+        const pids = [...counts.performer.keys()].map(v => parseInt(v, 10)).filter(n => !isNaN(n));
+        if (pids.length) {
+            db.prepare(`SELECT id, name FROM ext_performers WHERE id IN (${pids.map(() => '?').join(',')})`)
+                .all(...pids).forEach(p => names.set(String(p.id), p.name));
+        }
+
+        const list = (kind) => [...counts[kind]]
+            .map(([value, count]) => ({ value, count, label: kind === 'performer' ? (names.get(value) || '') : value }))
+            .filter(x => x.label)      // 出演者マスタから消えた id は出さない
+            .sort((a, b) => (b.count - a.count) || String(a.label).localeCompare(String(b.label), 'ja'));
+
+        res.json({
+            total: rows.length,
+            genre: list('genre'),
+            tag: list('tag'),
+            maker: list('maker'),
+            performer: list('performer'),
+            series: list('series'),
+        });
+    } catch (e) {
+        console.error('[ext search facets]', e);
         res.status(500).json({ error: e.message });
     }
 };
