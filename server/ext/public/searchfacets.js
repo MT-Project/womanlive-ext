@@ -1,7 +1,10 @@
 /* =============================================================
    WomanLive 拡張 - 検索結果のサイドメニュー (絞り込み)
-   検索結果に対して ジャンル / タグ / メーカー / 出演者 / シリーズ を件数の多い順に出し、
+   検索結果に対して 評価(範囲スライダー)と ジャンル / タグ / メーカー / 出演者 / シリーズ を出し、
    クリックで今の検索条件に足す(もう一度押すと外す)。上位5件を出し、残りは折りたたむ。
+
+   画面左上の「絞り込み」ボタンで開閉する(位置は固定でスクロールしない)。
+   既定は PC=開く / モバイル=閉じる。切り替えた状態はその端末に覚えさせる。
 
    対象は拡張の項目検索(q が空、または '@' で始まる)のとき。本家のキーワード検索は
    別経路(fullsearch)で条件の作りが違うため、サイドメニューは出さない。
@@ -38,6 +41,34 @@
     // サイドメニューを出せるのは、項目検索(空 or '@'始まり)のときだけ
     function facetable(q) { return !q || q.trim().startsWith('@'); }
 
+    /* ---------- 評価の範囲 (rating トークン ⇔ 0〜5 の範囲) ---------- */
+    const MAX_RATING = 5;
+    // 検索は rating トークンを AND でつなぐので、範囲は ">=下限" と "<=上限" の2つで表せる。
+    // 未評価は本家の検索条件が 0 として扱うため、下限0はそのまま「未評価も含む」になる。
+    function ratingRange(tokens) {
+        let min = 0, max = MAX_RATING;
+        tokens.filter(t => t.field === 'rating').forEach(t => {
+            const m = /^(>=|<=|>|<|=)?\s*(\d)/.exec(String(t.value).trim());
+            if (!m) return;
+            const op = m[1] || '=', n = parseInt(m[2], 10);
+            if (op === '>=') min = Math.max(min, n);
+            else if (op === '>') min = Math.max(min, n + 1);
+            else if (op === '<=') max = Math.min(max, n);
+            else if (op === '<') max = Math.min(max, n - 1);
+            else { min = Math.max(min, n); max = Math.min(max, n); }
+        });
+        min = Math.max(0, Math.min(MAX_RATING, min));
+        max = Math.max(min, Math.min(MAX_RATING, max));
+        return { min, max };
+    }
+    function withRating(tokens, min, max) {
+        const rest = tokens.filter(t => t.field !== 'rating');
+        const add = [];
+        if (min > 0) add.push({ field: 'rating', value: '>=' + min });
+        if (max < MAX_RATING) add.push({ field: 'rating', value: '<=' + max });
+        return rest.concat(add);
+    }
+
     function currentQuery() {
         return (new URLSearchParams(location.search).get('q') || '').trim();
     }
@@ -48,28 +79,70 @@
         WL.navigate('/search?' + p.toString());
     }
 
+    /* ---------- 開閉 ---------- */
+    // 既定は PC=開く / モバイル=閉じる。一度切り替えたらその端末の選択を覚える。
+    const OPEN_KEY = 'wlext_facets_open';
+    const isNarrow = () => window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+    function openState() {
+        try {
+            const v = localStorage.getItem(OPEN_KEY);
+            if (v === '1') return true;
+            if (v === '0') return false;
+        } catch (e) { }
+        return !isNarrow();
+    }
+    function setOpen(on, remember) {
+        if (remember) { try { localStorage.setItem(OPEN_KEY, on ? '1' : '0'); } catch (e) { } }
+        document.body.classList.toggle('wlext-facets-open', on);
+        if (btn) btn.classList.toggle('on', on);
+        if (on && (!panel || lastQuery !== currentQuery())) render();
+    }
+
     /* ---------- パネル ---------- */
-    let panel = null, lastQuery = null;
+    let panel = null, btn = null, backdrop = null, lastQuery = null;
 
     function ensure() {
         const on = location.pathname === '/search' && facetable(currentQuery());
         if (!on) { remove(); return; }
-        if (panel && lastQuery === currentQuery()) { position(); return; }
-        render();
+        if (!btn) {
+            // 絞り込みボタン: 画面左上に固定 (スクロールしても動かない)
+            btn = h('div', { class: 'wlext-facets-btn', title: '絞り込みメニューの開閉', onClick: () => setOpen(!document.body.classList.contains('wlext-facets-open'), true) },
+                [WL.icon('filter', 15), h('span', null, '絞り込み')]);
+            backdrop = h('div', { class: 'wlext-facets-backdrop', onClick: () => setOpen(false, true) });
+            document.body.appendChild(backdrop);
+            document.body.appendChild(btn);
+            document.body.classList.add('wlext-facets-on');
+            window.addEventListener('resize', position);
+            setOpen(openState(), false);
+        }
+        position();
+        if (document.body.classList.contains('wlext-facets-open') && lastQuery !== currentQuery()) render();
     }
 
     function remove() {
         if (panel) { panel.remove(); panel = null; }
+        if (btn) { btn.remove(); btn = null; }
+        if (backdrop) { backdrop.remove(); backdrop = null; }
         lastQuery = null;
-        document.body.classList.remove('wlext-facets-on');
+        document.body.classList.remove('wlext-facets-on', 'wlext-facets-open');
     }
 
-    // 本家ヘッダーの下から画面下端までを占める。ヘッダーの高さは実測する。
+    // ボタンは本家ヘッダーのすぐ下、パネルはそのさらに下から画面下端まで。
+    // ヘッダーの高さは実測する(本家の作りが変わっても追従するため)。
     function position() {
-        if (!panel) return;
         const nav = document.querySelector('#root [class*="nav_"]');
         const top = nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 56;
-        panel.style.top = top + 'px';
+        if (btn) btn.style.top = (top + 8) + 'px';
+        if (panel) panel.style.top = (top + 46) + 'px';
+        if (backdrop) backdrop.style.top = top + 'px';
+
+        // 一覧を右へ寄せる量。本家の結果一覧は左端が画面外(負の座標)から始まることがあるので、
+        // 固定値ではなく「パネルの右端 + 余白」に届くよう実測して決める。
+        const content = document.querySelector('#root [class*="content_"]');
+        if (!content) return;
+        const panelRight = panel ? panel.getBoundingClientRect().right : 241;
+        const need = Math.max(0, Math.round(panelRight + 16 - content.getBoundingClientRect().left));
+        document.documentElement.style.setProperty('--wlext-facet-pad', need + 'px');
     }
 
     async function render() {
@@ -78,12 +151,9 @@
         if (!panel) {
             panel = h('aside', { class: 'wlext-facets' });
             document.body.appendChild(panel);
-            document.body.classList.add('wlext-facets-on');
-            window.addEventListener('resize', position);
         }
         position();
         panel.innerHTML = '';
-        panel.appendChild(h('div', { class: 'wlext-facets-head' }, [WL.icon('filter', 16), h('span', null, '絞り込み')]));
         const body = h('div', { class: 'wlext-facets-body' }, h('div', { class: 'wlext-facets-msg' }, '読み込み中...'));
         panel.appendChild(body);
 
@@ -94,6 +164,8 @@
 
         const tokens = parseTokens(q);
         body.innerHTML = '';
+        // 評価はジャンルの上。候補が無くても(結果0件でも)出して、範囲を広げ直せるようにする。
+        body.appendChild(ratingSection(tokens));
         let any = false;
         SECTIONS.forEach(sec => {
             const items = data[sec.key] || [];
@@ -102,6 +174,74 @@
             body.appendChild(section(sec, items, tokens));
         });
         if (!any) body.appendChild(h('div', { class: 'wlext-facets-msg' }, '絞り込める項目がありません'));
+    }
+
+    /* ---------- 評価スライダー (ジャンルの上) ---------- */
+    // 0〜5 の点を並べ、両端のつまみをドラッグ(またはクリック)して範囲を決める。
+    // 動かしている間は表示だけ更新し、指を離した時点で検索し直す。
+    function ratingSection(tokens) {
+        const cur = ratingRange(tokens);
+        let min = cur.min, max = cur.max;
+
+        const valueEl = h('div', { class: 'wlext-facet-range-value' });
+        const fill = h('div', { class: 'wlext-facet-track-fill' });
+        const track = h('div', { class: 'wlext-facet-track', title: 'ドラッグで範囲を変更' }, fill);
+        const dots = [];
+        for (let i = 0; i <= MAX_RATING; i++) {
+            const d = h('div', { class: 'wlext-facet-dot' });
+            d.style.left = (i / MAX_RATING * 100) + '%';
+            track.appendChild(d);
+            dots.push(d);
+        }
+
+        function paint() {
+            valueEl.textContent = (min === 0 && max === MAX_RATING) ? 'すべて'
+                : (min === max ? String(min) : min + '〜' + max);
+            fill.style.left = (min / MAX_RATING * 100) + '%';
+            fill.style.width = ((max - min) / MAX_RATING * 100) + '%';
+            dots.forEach((d, i) => {
+                d.classList.toggle('on', i >= min && i <= max);
+                d.classList.toggle('handle', i === min || i === max);
+            });
+        }
+
+        const indexAt = (e) => {
+            const r = track.getBoundingClientRect();
+            const ratio = r.width ? (e.clientX - r.left) / r.width : 0;
+            return Math.round(Math.min(1, Math.max(0, ratio)) * MAX_RATING);
+        };
+        let dragging = null;   // 'min' | 'max'
+        function grab(i) {
+            // 範囲の外を押したらその側、内側なら近いほうのつまみを動かす
+            if (i < min) return 'min';
+            if (i > max) return 'max';
+            return (i - min) <= (max - i) ? 'min' : 'max';
+        }
+        function move(i) {
+            if (dragging === 'min') min = Math.min(i, max); else max = Math.max(i, min);
+            paint();
+        }
+        track.addEventListener('pointerdown', (e) => {
+            const i = indexAt(e);
+            dragging = grab(i);
+            move(i);
+            try { track.setPointerCapture(e.pointerId); } catch (err) { }
+        });
+        track.addEventListener('pointermove', (e) => { if (dragging) move(indexAt(e)); });
+        const release = () => {
+            if (!dragging) return;
+            dragging = null;
+            if (min !== cur.min || max !== cur.max) go(withRating(tokens, min, max));
+        };
+        track.addEventListener('pointerup', release);
+        track.addEventListener('pointercancel', release);
+
+        paint();
+        return h('div', { class: 'wlext-facet-section wlext-facet-range' }, [
+            h('div', { class: 'wlext-facet-title' }, [h('span', null, '★'), h('span', null, '評価')]),
+            valueEl, track,
+            h('div', { class: 'wlext-facet-scale' }, [h('span', null, '0'), h('span', null, String(MAX_RATING))])
+        ]);
     }
 
     function section(sec, items, tokens) {

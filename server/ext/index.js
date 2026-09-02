@@ -24,6 +24,7 @@ const frame = require('./routes/frame');
 const maintenance = require('./routes/maintenance');
 const replace = require('./routes/replace');
 const makers = require('./routes/makers');
+const file = require('./routes/file');
 const createInject = require('./inject');
 
 module.exports = function setupExt(app) {
@@ -78,6 +79,9 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/settings', cover.getSettings);
     app.post('/ext/api/settings', cover.updateSettings);
     app.get('/ext/api/video/:id/cover', cover.getCover);
+
+    // -- 動画ファイルの配信 (モバイルの端末保存 / アプリで開く)
+    app.get('/ext/api/video/:id/file', file.file);
 
     // -- コマ送り (フレームレート)
     app.get('/ext/api/video/:id/frameinfo', frame.frameInfo);

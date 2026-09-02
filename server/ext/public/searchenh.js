@@ -1,5 +1,5 @@
 /* =============================================================
-   WomanLive 拡張 - 検索ページの拡張 (評価ソート / 評価で絞り込み)
+   WomanLive 拡張 - 検索ページの拡張 (評価ソート / スクショ数ソート / 表示名ソート)
    既存ソートボタンと同一クラスを流用して見た目を統一し、
    並び替え状態が変わったら自分のボタンも作り直して整合させる。
    ============================================================= */
@@ -106,18 +106,7 @@
             WL.navigate('/search?' + np.toString());
         }));
 
-        // 評価で絞り込み ★1〜★5
-        wrap.appendChild(h('span', { style: { color: 'var(--text-secondary,#999)', fontSize: '0.8rem' } }, '評価:'));
-        for (let n = 1; n <= 5; n++) {
-            const token = '@rating:' + n;
-            const active = q === token;
-            wrap.appendChild(mkBtn('★' + n, active, () => {
-                const np = params();
-                np.set('q', active ? '' : token);
-                np.set('page', '1');
-                WL.navigate('/search?' + np.toString());
-            }));
-        }
+        // 評価での絞り込みは、サイドメニュー(searchfacets.js)のスライダーへ移した
 
         bar.appendChild(wrap);
     }

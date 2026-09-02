@@ -21,6 +21,7 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/cover.js',
     '/ext/assets/ssresize.js',
     '/ext/assets/framestep.js',
+    '/ext/assets/mobileact.js',
     '/ext/assets/dispname.js',
     '/ext/assets/videometa.js',
     '/ext/assets/searchenh.js',
