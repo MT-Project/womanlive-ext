@@ -236,14 +236,34 @@
     }
     WL.cacheVideoTags = cacheVideoTags;
 
+    // '@' で始まるフィールド検索 → search.js、それ以外の通常キーワード → fullsearch.js。
+    // 拡張ソート(ext_rating / ext_screenshots 等)は両経路の sortMap で適用されるため、
+    // 振り分けは検索語の種類だけで決める(キーワード+拡張ソートの併用を壊さない)。
+    function searchEndpointFor(q) {
+        return String(q || '').trim().startsWith('@') ? '/ext/api/search' : '/ext/api/fullsearch';
+    }
+
+    // 本家 ver.260914 から、件数は一覧とは別の /api/videos/count で取るようになった。
+    // 一覧だけを拡張へ振り向けると「件数は本家の検索結果」になって食い違うので、
+    // 件数も同じ条件で数え直す (例: @maker:"X" は本家だとキーワード扱いで 0 件になる)。
+    async function handleVideoCountFetch(url, input, init) {
+        const u = new URL(url, location.origin);
+        const p = new URLSearchParams(u.searchParams);
+        p.set('page', '1');
+        p.set('perPage', '1');   // 欲しいのは totalCount だけ
+        try {
+            const r = await origFetch(searchEndpointFor(u.searchParams.get('q')) + '?' + p.toString());
+            if (r.ok) {
+                const data = await r.json();
+                if (data && typeof data.totalCount === 'number') return jsonResponse({ totalCount: data.totalCount });
+            }
+        } catch (e) { /* フォールバックへ */ }
+        return origFetch(input, init);
+    }
+
     async function handleVideosFetch(url, input, init) {
         const u = new URL(url, location.origin);
-        const q = (u.searchParams.get('q') || '').trim();
-        // '@' で始まるフィールド検索 → search.js、それ以外の通常キーワード → fullsearch.js。
-        // 拡張ソート(ext_rating / ext_screenshots 等)は両経路の sortMap で適用されるため、
-        // 振り分けは検索語の種類だけで決める(キーワード+拡張ソートの併用を壊さない)。
-        const isFieldQuery = q.startsWith('@');
-        const endpoint = isFieldQuery ? '/ext/api/search' : '/ext/api/fullsearch';
+        const endpoint = searchEndpointFor(u.searchParams.get('q'));
 
         try {
             const r = await origFetch(endpoint + '?' + u.searchParams.toString());
@@ -308,6 +328,7 @@
         try {
             const url = typeof input === 'string' ? input : (input && input.url) || '';
             if (typeof input === 'string') {
+                if (/\/api\/videos\/count(\?|$)/.test(url)) return handleVideoCountFetch(url, input, init);
                 if (/\/api\/videos(\?|$)/.test(url)) return handleVideosFetch(url, input, init);
                 const mv = url.match(/\/api\/video\/(\d+)(\?|$)/);
                 if (mv) return handleSingleVideoFetch(mv[1], input, init);

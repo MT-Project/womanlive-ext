@@ -40,6 +40,8 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/bulkselect.js',
     '/ext/assets/homelinks.js',
     '/ext/assets/settings.js',
+    // 設定画面のサイドメニュー: settings.js がセクションを差し込んだ後に並べ替えるので、その後ろに置く
+    '/ext/assets/settingsnav.js',
 ];
 
 module.exports = function createInject() {

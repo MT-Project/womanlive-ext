@@ -6,8 +6,9 @@
    画面左上の「絞り込み」ボタンで開閉する(位置は固定でスクロールしない)。
    既定は PC=開く / モバイル=閉じる。切り替えた状態はその端末に覚えさせる。
 
-   対象は拡張の項目検索(q が空、または '@' で始まる)のとき。本家のキーワード検索は
-   別経路(fullsearch)で条件の作りが違うため、サイドメニューは出さない。
+   検索結果画面では常に出す。キーワード検索も項目検索も、サーバー側(search.js)が
+   項目トークンとキーワードを混ぜて扱えるので、絞り込んでもキーワードは消えない。
+   本家のフォルダ絞り込み(path)・再生履歴ソートは、候補の集計にも同じ条件で効かせる。
    ============================================================= */
 (function () {
     'use strict';
@@ -23,23 +24,35 @@
     ];
     const TOP_N = 5;
 
-    /* ---------- 検索クエリ (トークン列) の読み書き ---------- */
-    // サーバー側 search.js の tokenize と同じ分解をする
+    /* ---------- 検索クエリ (項目トークン + キーワード) の読み書き ---------- */
+    // サーバー側 search.js の splitQuery と同じ分解をする。
+    // '@' で始まらないものは本家のキーワード検索なので、丸ごとキーワードとして扱う。
     const TOKEN_RE = /(\w+)\s*:\s*("([^"]*)"|[^\s]+)/g;
-    function parseTokens(q) {
-        const s = String(q || '').trim().replace(/^@/, '');
-        const out = [];
-        let m;
+    function parseQuery(q) {
+        const s = String(q || '').trim();
+        if (!s) return { tokens: [], keyword: '' };
+        if (!s.startsWith('@')) return { tokens: [], keyword: s };
+
+        const body = s.slice(1);
+        const tokens = [];
+        let m, last = 0, rest = '';
         TOKEN_RE.lastIndex = 0;
-        while ((m = TOKEN_RE.exec(s)) !== null) out.push({ field: m[1].toLowerCase(), value: m[3] !== undefined ? m[3] : m[2] });
-        return out;
+        while ((m = TOKEN_RE.exec(body)) !== null) {
+            rest += body.slice(last, m.index);
+            last = m.index + m[0].length;
+            tokens.push({ field: m[1].toLowerCase(), value: m[3] !== undefined ? m[3] : m[2] });
+        }
+        rest += body.slice(last);
+        return { tokens, keyword: rest.trim() };
     }
-    function buildQuery(tokens) {
-        if (!tokens.length) return '';
-        return '@' + tokens.map(t => t.field + ':"' + t.value + '"').join(' ');
+    // キーワードは末尾に残す (絞り込みを足してもキーワード検索が消えないようにする)。
+    // 絞り込みを全部外した状態はキーワードだけなので、'@' を付けず本家の検索語の形に戻す。
+    function buildQuery(tokens, keyword) {
+        if (!tokens.length) return keyword || '';
+        const parts = tokens.map(t => t.field + ':"' + t.value + '"');
+        if (keyword) parts.push(keyword);
+        return '@' + parts.join(' ');
     }
-    // サイドメニューを出せるのは、項目検索(空 or '@'始まり)のときだけ
-    function facetable(q) { return !q || q.trim().startsWith('@'); }
 
     /* ---------- 評価の範囲 (rating トークン ⇔ 0〜5 の範囲) ---------- */
     const MAX_RATING = 5;
@@ -72,9 +85,20 @@
     function currentQuery() {
         return (new URLSearchParams(location.search).get('q') || '').trim();
     }
-    function go(tokens) {
+    // 一覧と同じ母集団を数えるための条件。本家 ver.260914 のフォルダ絞り込み(path)と
+    // 再生履歴ソート(未再生を除く)は、候補の集計にも効かせる。
+    function currentScope() {
         const p = new URLSearchParams(location.search);
-        p.set('q', buildQuery(tokens));
+        return { path: p.get('path') || '', sort: p.get('sort') || '' };
+    }
+    // 検索語だけでなく絞り込み条件が変わったときも取り直す
+    function stateKey() {
+        const s = currentScope();
+        return [currentQuery(), s.path, s.sort].join('\n');
+    }
+    function go(tokens, keyword) {
+        const p = new URLSearchParams(location.search);
+        p.set('q', buildQuery(tokens, keyword));
         p.set('page', '1');
         WL.navigate('/search?' + p.toString());
     }
@@ -95,15 +119,15 @@
         if (remember) { try { localStorage.setItem(OPEN_KEY, on ? '1' : '0'); } catch (e) { } }
         document.body.classList.toggle('wlext-facets-open', on);
         if (btn) btn.classList.toggle('on', on);
-        if (on && (!panel || lastQuery !== currentQuery())) render();
+        if (on && (!panel || lastKey !== stateKey())) render();
     }
 
     /* ---------- パネル ---------- */
-    let panel = null, btn = null, backdrop = null, lastQuery = null;
+    let panel = null, btn = null, backdrop = null, lastKey = null;
 
     function ensure() {
-        const on = location.pathname === '/search' && facetable(currentQuery());
-        if (!on) { remove(); return; }
+        // 検索結果画面では常に出す(キーワード検索・タグバッジ・年月リンク等も含む)
+        if (location.pathname !== '/search') { remove(); return; }
         if (!btn) {
             // 絞り込みボタン: 画面左上に固定 (スクロールしても動かない)
             btn = h('div', { class: 'wlext-facets-btn', title: '絞り込みメニューの開閉', onClick: () => setOpen(!document.body.classList.contains('wlext-facets-open'), true) },
@@ -116,14 +140,14 @@
             setOpen(openState(), false);
         }
         position();
-        if (document.body.classList.contains('wlext-facets-open') && lastQuery !== currentQuery()) render();
+        if (document.body.classList.contains('wlext-facets-open') && lastKey !== stateKey()) render();
     }
 
     function remove() {
         if (panel) { panel.remove(); panel = null; }
         if (btn) { btn.remove(); btn = null; }
         if (backdrop) { backdrop.remove(); backdrop = null; }
-        lastQuery = null;
+        lastKey = null;
         document.body.classList.remove('wlext-facets-on', 'wlext-facets-open');
     }
 
@@ -147,7 +171,7 @@
 
     async function render() {
         const q = currentQuery();
-        lastQuery = q;
+        lastKey = stateKey();
         if (!panel) {
             panel = h('aside', { class: 'wlext-facets' });
             document.body.appendChild(panel);
@@ -158,20 +182,20 @@
         panel.appendChild(body);
 
         let data;
-        try { data = await WL.api.searchFacets(q); }
+        try { data = await WL.api.searchFacets(q, currentScope()); }
         catch (e) { body.innerHTML = ''; body.appendChild(h('div', { class: 'wlext-facets-msg' }, '読み込みに失敗しました: ' + e.message)); return; }
-        if (lastQuery !== currentQuery()) return;   // 待っている間に検索が変わった
+        if (lastKey !== stateKey()) return;   // 待っている間に検索が変わった
 
-        const tokens = parseTokens(q);
+        const { tokens, keyword } = parseQuery(q);
         body.innerHTML = '';
         // 評価はジャンルの上。候補が無くても(結果0件でも)出して、範囲を広げ直せるようにする。
-        body.appendChild(ratingSection(tokens));
+        body.appendChild(ratingSection(tokens, keyword));
         let any = false;
         SECTIONS.forEach(sec => {
             const items = data[sec.key] || [];
             if (!items.length) return;
             any = true;
-            body.appendChild(section(sec, items, tokens));
+            body.appendChild(section(sec, items, tokens, keyword));
         });
         if (!any) body.appendChild(h('div', { class: 'wlext-facets-msg' }, '絞り込める項目がありません'));
     }
@@ -179,7 +203,7 @@
     /* ---------- 評価スライダー (ジャンルの上) ---------- */
     // 0〜5 の点を並べ、両端のつまみをドラッグ(またはクリック)して範囲を決める。
     // 動かしている間は表示だけ更新し、指を離した時点で検索し直す。
-    function ratingSection(tokens) {
+    function ratingSection(tokens, keyword) {
         const cur = ratingRange(tokens);
         let min = cur.min, max = cur.max;
 
@@ -231,20 +255,20 @@
         const release = () => {
             if (!dragging) return;
             dragging = null;
-            if (min !== cur.min || max !== cur.max) go(withRating(tokens, min, max));
+            if (min !== cur.min || max !== cur.max) go(withRating(tokens, min, max), keyword);
         };
         track.addEventListener('pointerup', release);
         track.addEventListener('pointercancel', release);
 
         paint();
         return h('div', { class: 'wlext-facet-section wlext-facet-range' }, [
-            h('div', { class: 'wlext-facet-title' }, [h('span', null, '★'), h('span', null, '評価')]),
+            h('div', { class: 'wlext-facet-title' }, [WL.icon('star', 15), h('span', null, '評価')]),
             valueEl, track,
             h('div', { class: 'wlext-facet-scale' }, [h('span', null, '0'), h('span', null, String(MAX_RATING))])
         ]);
     }
 
-    function section(sec, items, tokens) {
+    function section(sec, items, tokens, keyword) {
         const listEl = h('div', { class: 'wlext-facet-list' });
         const isActive = (v) => tokens.some(t => t.field === sec.field && t.value === v);
 
@@ -258,7 +282,7 @@
                     const next = active
                         ? tokens.filter(t => !(t.field === sec.field && t.value === it.value))
                         : tokens.concat([{ field: sec.field, value: it.value }]);
-                    go(next);
+                    go(next, keyword);
                 }
             }, [
                 h('span', { class: 'wlext-facet-name' }, it.label),

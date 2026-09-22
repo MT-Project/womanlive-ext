@@ -24,6 +24,8 @@
         // 公開カレンダー: 本家「カレンダー」とは別アイコン(チェック付き)
         'calendar-check': '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
         library: '<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+        // 評価 (lucide star) — 絞り込みの見出し用。★の文字ではなく他項目と同じ線画で揃える
+        star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
         // 絞り込み (lucide funnel) / ジャンル (lucide layers)
         filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
         layers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>',
@@ -77,7 +79,8 @@
     const NAV_ITEMS = [
         { href: '/screenshots', icon: 'image', label: 'スクリーンショットギャラリー' },
         { href: '/calendar', icon: 'calendar', label: 'カレンダー' },
-        { href: '/folder-tree', icon: 'folder', label: 'フォルダーツリー' },
+        // 本家 ver.260914 で /folder-tree は廃止され、検索画面のフォルダ絞り込み(カテゴリー)になった
+        { href: '/search?path=root', icon: 'folder', label: 'カテゴリー' },
         { href: '/bookmarks', icon: 'bookmark', label: 'ブックマーク' },
         { href: '/release-calendar', icon: 'calendar-check', label: '公開カレンダー' },
         { href: '/makers', icon: 'factory', label: 'メーカー一覧' },
@@ -363,9 +366,19 @@
     }
 
     // 本家ヘッダーのロゴ「WomanLive」を「WomanLiveEX」へ置換 (拡張起動中の目印)
+    // ver.260914 でロゴが <a><span class="logoText_">WomanLive</span><svg…></a> の形になり、
+    // リンク直下のテキストではなくなった。中の「WomanLive」だけを持つ末端要素を探して置き換える
+    // (構造がまた変わっても、テキストの一致で追従できるようにしておく)。
     function patchBrand() {
         document.querySelectorAll('a[href="/"]').forEach(a => {
-            if (a.childElementCount === 0 && a.textContent.trim() === 'WomanLive') a.textContent = 'WomanLiveEX';
+            if (a.textContent.trim() !== 'WomanLive') return;
+            if (a.childElementCount === 0) { a.textContent = 'WomanLiveEX'; return; }
+            for (const el of a.querySelectorAll('*')) {
+                if (el.childElementCount === 0 && el.textContent.trim() === 'WomanLive') {
+                    el.textContent = 'WomanLiveEX';
+                    return;
+                }
+            }
         });
     }
 

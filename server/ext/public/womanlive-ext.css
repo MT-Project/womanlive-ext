@@ -309,6 +309,19 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* 取得結果の反映プレビュー (チェックした項目だけを設定する: 現在値 → 新しい値) */
+.wlext-prev-grid { display: flex; flex-direction: column; gap: 0.15rem; }
+.wlext-prev-row {
+    display: grid; grid-template-columns: auto 5.5em 1fr auto 1fr; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 0.2rem; border-bottom: 1px dashed var(--border-primary, #eee);
+    font-size: 0.85rem; cursor: pointer;
+}
+.wlext-prev-row:last-child { border-bottom: none; }
+.wlext-prev-label { color: var(--text-secondary, #888); }
+.wlext-prev-cur { color: var(--text-secondary, #999); overflow-wrap: anywhere; }
+.wlext-prev-arrow { color: var(--text-secondary, #888); }
+.wlext-prev-new { color: var(--text-primary, #222); font-weight: 600; overflow-wrap: anywhere; }
+
 /* ---- 共通ダイアログ ---- */
 .wlext-overlay {
     position: fixed; inset: 0; z-index: 6000;
@@ -907,6 +920,15 @@ body.wlext-facets-on #root [class*="statusBar_"] { padding-left: 92px; }
     body.wlext-facets-on.wlext-facets-open #root [class*="content_"] { padding-left: 22px !important; }
     body.wlext-facets-open .wlext-facets-backdrop { display: block; }
     .wlext-facets { width: min(280px, 82vw); box-shadow: 0 0 24px rgba(0, 0, 0, 0.35); }
+}
+
+/* ---- 設定画面のサイドメニュー (絞り込みメニューと同じ見た目。パネル/ボタン/項目のCSSを共用) ---- */
+body.wlext-setnav-open .wlext-facets.wlext-setnav { display: flex; }
+/* 設定の本文は中央寄せ(container が max-width)なので、ページ側の余白で右へ寄せる */
+body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 256px; }
+@media (max-width: 900px) {
+    body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 0; }
+    body.wlext-setnav-open .wlext-facets-backdrop { display: block; }
 }
 
 /* ---- スクリーンショット枚数バッジ (検索カード: フォルダ名の右) ---- */

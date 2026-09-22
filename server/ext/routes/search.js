@@ -5,32 +5,58 @@
 // 戻り値の形は /api/videos と同じ { videos, totalCount } に揃えます。
 // =============================================================
 const { db, splitList, SORT_MAP } = require('../db');
+const { keywordWhere, orderByFor, pathWhere, sortWhere } = require('./fullsearch');
 
 const VIDEO_FIELDS = `
     f.id, f.path, f.filename, f.size,
     m.hash, m.duration,
     (m.thumbnail IS NOT NULL) AS has_thumbnail,
     LENGTH(m.thumbnail) AS thumbnail_size,
-    m.tags, m.use_transcode, m.last_pos,
+    m.tags, m.use_transcode, m.display_name, m.last_pos,
     e.display_name AS ext_display_name,
     e.rating AS ext_rating
 `;
 
-// "@maker:\"X\" rating:>=4 director:\"Y\"" のような文字列をトークンに分解
-function tokenize(q) {
-    if (!q) return [];
-    let s = q.trim();
-    if (s.startsWith('@')) s = s.slice(1);
+// 検索文字列を「項目トークン」と「キーワード」に分ける。
+//   '@maker:"X" rating:>=4 温泉' -> tokens=[maker,rating] keyword='温泉'
+// '@' で始まらないものは本家と同じキーワード検索なので、項目トークンとしては解釈しない
+// (例: "http://x" の "http:" をフィールド名と読み違えないため)。
+function splitQuery(q) {
+    const s = String(q == null ? '' : q).trim();
+    if (!s) return { tokens: [], keyword: '' };
+    if (!s.startsWith('@')) return { tokens: [], keyword: s };
+
+    const body = s.slice(1);
     const tokens = [];
     // field:"quoted value"  または field:value
     const re = /(\w+)\s*:\s*("([^"]*)"|[^\s]+)/g;
-    let match;
-    while ((match = re.exec(s)) !== null) {
+    let match, last = 0, rest = '';
+    while ((match = re.exec(body)) !== null) {
+        rest += body.slice(last, match.index);
+        last = match.index + match[0].length;
         const field = match[1].toLowerCase();
         let value = match[3] !== undefined ? match[3] : match[2];
         tokens.push({ field, value });
     }
-    return tokens;
+    rest += body.slice(last);
+    return { tokens, keyword: rest.trim() };
+}
+
+// 検索文字列から WHERE 条件一式を作る (項目トークン AND キーワード AND フォルダ)
+// query は req.query 相当 (path / sort も見る)。文字列を渡したときは検索語だけとして扱う。
+function conditionsFor(query) {
+    const opts = (query && typeof query === 'object') ? query : { q: query };
+    const { tokens, keyword } = splitQuery(opts.q);
+    const { where, params } = buildConditions(tokens);
+    if (keyword) {
+        const kw = keywordWhere(keyword);   // 書式が不正なら badRequest 付きで throw
+        if (kw.sql) { where.push('(' + kw.sql + ')'); params.push(...kw.params); }
+    }
+    const pw = pathWhere(opts.path);
+    if (pw.sql) { where.push(pw.sql); params.push(...pw.params); }
+    const sw = sortWhere(opts.sort);
+    if (sw) where.push(sw);
+    return { where, params };
 }
 
 function buildConditions(tokens) {
@@ -109,12 +135,11 @@ function buildConditions(tokens) {
 
 exports.search = (req, res) => {
     try {
-        const { q = '', page = 1, perPage = 20, sort = 'updated_desc' } = req.query;
+        const { q = '', page = 1, perPage = 20, sort = 'updated_desc', seed } = req.query;
         const limit = Math.max(1, parseInt(perPage, 10) || 20);
         const offset = (Math.max(1, parseInt(page, 10) || 1) - 1) * limit;
 
-        const tokens = tokenize(q);
-        const { where, params } = buildConditions(tokens);
+        const { where, params } = conditionsFor(req.query);
 
         // ext テーブルが必須となる条件があるか (performer/rating など) で JOIN種別を決める
         const joinType = 'LEFT JOIN';
@@ -125,7 +150,8 @@ exports.search = (req, res) => {
         `;
         const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
 
-        const orderBy = SORT_MAP[sort] || SORT_MAP['updated_desc'];
+        // ランダムは全文検索と同じシード付き乱数を使う (絞り込み中でも並びが保たれる)
+        const { orderBy, extraParams } = orderByFor(sort, seed);
 
         const total = db.prepare(`SELECT COUNT(*) AS total ${base}${whereSql}`).get(...params).total;
 
@@ -134,10 +160,11 @@ exports.search = (req, res) => {
             ${base}${whereSql}
             ORDER BY ${orderBy}
             LIMIT ? OFFSET ?
-        `).all(...params, limit, offset);
+        `).all(...params, ...extraParams, limit, offset);
 
         res.json({ videos, totalCount: total });
     } catch (e) {
+        if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext search]', e);
         res.status(500).json({ error: e.message });
     }
@@ -209,8 +236,8 @@ exports.releaseCalendar = (req, res) => {
 //   出演者だけは検索が id 指定なので value=id / label=氏名 と分かれる。
 exports.facets = (req, res) => {
     try {
-        const tokens = tokenize(req.query.q || '');
-        const { where, params } = buildConditions(tokens);
+        // 一覧と同じ母集団を数えるため、検索語だけでなく path / sort も同じに扱う
+        const { where, params } = conditionsFor(req.query);
         const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
 
         const rows = db.prepare(`
@@ -253,6 +280,7 @@ exports.facets = (req, res) => {
             series: list('series'),
         });
     } catch (e) {
+        if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext search facets]', e);
         res.status(500).json({ error: e.message });
     }

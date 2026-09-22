@@ -60,7 +60,12 @@
         releaseCalendar: () => req('/ext/api/release-calendar'),
         seriesList: () => req('/ext/api/series'),
         // 検索結果の絞り込み候補 (サイドメニュー)
-        searchFacets: (q) => req('/ext/api/search/facets?q=' + encodeURIComponent(q || '')),
+        // extra には一覧と同じ母集団にするための path / sort を渡す (本家のフォルダ絞り込み対応)
+        searchFacets: (q, extra) => {
+            const p = new URLSearchParams({ q: q || '' });
+            if (extra) Object.keys(extra).forEach(k => { if (extra[k]) p.set(k, extra[k]); });
+            return req('/ext/api/search/facets?' + p.toString());
+        },
 
         // メーカー一覧 / メーカー情報
         makersList: () => req('/ext/api/makers'),

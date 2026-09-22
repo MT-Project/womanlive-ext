@@ -6,11 +6,35 @@
 const { db, getSetting, splitList, joinList, hashOfVideo } = require('../db');
 const cover = require('./cover');
 
+// 品番を英字部分と数字部分に分ける  例: AP-147 -> { alpha:'ap', num:147 }
+function parseModelNo(pn) {
+    const m = String(pn || '').trim().match(/^([A-Za-z]+)[-_ ]?0*(\d+)/);
+    return m ? { alpha: m[1].toLowerCase(), num: parseInt(m[2], 10) } : null;
+}
+
 // 品番 -> content_id 形式 (英字小文字 + 数字5桁ゼロ埋め)  例: AARM-004 -> aarm00004
 function toCid(pn) {
-    const m = String(pn || '').trim().match(/^([A-Za-z]+)[-_ ]?0*(\d+)/);
-    if (!m) return null;
-    return m[1].toLowerCase() + String(m[2]).padStart(5, '0');
+    const p = parseModelNo(pn);
+    return p ? p.alpha + String(p.num).padStart(5, '0') : null;
+}
+
+// その商品が本当にこの品番のものか。
+// DMM のキーワード検索は部分一致なので、品番の前に別の英字が付いた品番まで拾ってしまう
+// (例: AP-147 で検索すると SLAP-147 / PAP-147 が返る)。取得した情報が別作品のものに
+// なるのを防ぐため、content_id 側の品番と突き合わせて一致するものだけを採用する。
+//
+// content_id は [接頭辞?][英字][数字][接尾辞?] の形。接頭辞は "1"/"7" のような数字や
+// "h_068" のような形があり、接尾辞は分割の a/b や bod・tk などが付く。
+//   1ap00147 / ap147 / h_068ap00147 → AP-147     (英字の直前が英字でない)
+//   slap00147 / pap00147           → 別品番      (英字の直前が英字)
+//   7club513 / club519bod          → CLUB-513等  (数字が違う)
+function matchesModelNo(contentId, pn) {
+    const p = parseModelNo(pn);
+    if (!p) return false;
+    // 英字の直前が英字でないこと(SLAP の中の AP を弾く)、数字がゼロ埋め違いを含めて同じこと、
+    // その数字の直後に数字が続かないこと(CLUB-51 が CLUB-513 に当たらないようにする)
+    const re = new RegExp('(^|[^a-z])' + p.alpha + '0*' + p.num + '(?![0-9])');
+    return re.test(String(contentId || '').toLowerCase());
 }
 
 function normDate(s) {
@@ -22,6 +46,10 @@ function normDate(s) {
 
 function names(arr) { return (arr || []).map(x => x && x.name).filter(Boolean); }
 function firstName(arr) { const n = names(arr); return n.length ? n[0] : ''; }
+
+// FANZA は「レーベルなし」を空ではなく "----" という名前で返すことがある。
+// そのまま入れるとレーベルに "----" が並ぶので、値として採用せず空にする。
+function blankIfDashes(s) { return /^[-\s]+$/.test(String(s == null ? '' : s)) ? '' : s; }
 
 // 通販(mono)の item は imageURL.large を返さず list/small (数KBのサムネ) しか無い。
 // 同じ場所に大判の *pl.jpg があるので、末尾を差し替えた URL を候補に加える。
@@ -55,7 +83,7 @@ function mapItem(it) {
         genres: names(ii.genre),
         series: firstName(ii.series),
         maker: firstName(ii.maker),
-        label: firstName(ii.label),
+        label: blankIfDashes(firstName(ii.label)),
         actresses: names(ii.actress),
         directors: names(ii.director),
         imageLarge: largeImageUrl(img) || img,
@@ -102,7 +130,10 @@ async function findItems(apiId, affId, pn) {
     for (const fl of FLOORS) {
         for (const a of attempts) {
             const r = await callDmm(apiId, affId, fl, a.param);
-            if (r.items && r.items.length > 0) return { result: r, method: fl.floor + '/' + a.label };
+            // キーワード検索は部分一致なので、品番が一致するものだけを残す。
+            // 残らなければ「見つからなかった」として次の引き方へ進む。
+            const items = (r.items || []).filter(it => matchesModelNo(it.content_id, pn));
+            if (items.length > 0) return { result: { ...r, items }, method: fl.floor + '/' + a.label };
         }
     }
     return { result: {}, method: '' };
@@ -129,7 +160,7 @@ exports.search = async (req, res) => {
         const items = (result.items || []).map(mapItem);
         res.json({
             status: result.status,
-            total_count: Number(result.total_count || items.length),
+            total_count: items.length,   // 品番が一致したものだけを数える
             method,
             keyword: pn,
             items
@@ -193,7 +224,7 @@ exports.apply = async (req, res) => {
             sv(item.date) || cur.release_date || null,
             sv(item.series) || cur.series || null,
             sv(item.maker) || cur.maker || null,
-            sv(item.label) || cur.label || null,
+            sv(blankIfDashes(item.label)) || cur.label || null,
             (item.directors || []).length ? joinList(item.directors) : (cur.directors || null),
             joinList(genres),
             performerIds.length ? joinList(performerIds) : (cur.performers || null)
