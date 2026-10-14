@@ -6,6 +6,7 @@
 //  ・完全一致のみ置換する(部分一致では置換しない)
 // =============================================================
 const { db, splitList, joinList, getSetting, setSetting } = require('../db');
+const library = require('../library');
 
 const PRESET_TAGS_KEY = 'preset_tags';
 const TAG_LAYOUT_KEY = 'ext_video_tag_layout';
@@ -160,6 +161,8 @@ function deleteFromListColumn(column, value) {
 function deletePerformer(id) {
     const n = deleteFromListColumn('performers', String(id));
     db.prepare('DELETE FROM ext_performers WHERE id = ?').run(id);
+    // 出演者は全ライブラリ共通なので、ほかのライブラリの動画からも紐付けを外す
+    library.removePerformersElsewhere(db, [id]);
     return n;
 }
 

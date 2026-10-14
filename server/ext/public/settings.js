@@ -307,7 +307,9 @@
                 const url = URL.createObjectURL(blob);
                 const now = new Date();
                 const stamp = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2) + '-' + ('0' + now.getHours()).slice(-2) + ('0' + now.getMinutes()).slice(-2);
-                const a = h('a', { href: url, download: 'womanlive-ext-backup-' + stamp + '.json' });
+                // ライブラリが複数あるときは、どのライブラリのバックアップか分かるよう名前を入れる
+                const lib = WL.library && WL.library.count > 1 ? WL.library.name.replace(/[\\\/:*?"<>|\s]+/g, '_') + '-' : '';
+                const a = h('a', { href: url, download: 'womanlive-ext-backup-' + lib + stamp + '.json' });
                 document.body.appendChild(a); a.click(); a.remove();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 result.textContent = 'エクスポートしました。';
@@ -331,8 +333,12 @@
 
         function doImport() {
             if (!importData) { WL.toast('先にJSONファイルを選択してください', 'error'); return; }
-            WL.dialog('バックアップを復元', h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } },
-                '現在の拡張機能データ（追加メタ・出演者・ブックマーク等）は、バックアップの内容で置き換えられます。よろしいですか？'), {
+            const multiLib = WL.library && WL.library.count > 1;
+            WL.dialog('バックアップを復元', h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } }, [
+                multiLib ? h('div', null, '復元先: ライブラリ「' + WL.library.name + '」') : null,
+                h('div', null, '現在の拡張機能データ（追加メタ・出演者・ブックマーク等）は、バックアップの内容で置き換えられます。よろしいですか？'),
+                multiLib ? h('div', { style: { color: 'var(--status-error,#e51400)' } }, '出演者は全ライブラリ共通のため、出演者の復元はすべてのライブラリに反映されます。') : null,
+            ]), {
                 saveLabel: '復元する',
                 onSave: async (close) => {
                     result.textContent = 'インポート中...';
@@ -431,6 +437,8 @@
     }
 
     /* ---------- 簡易フォルダピッカ ---------- */
+    // ライブラリの取り込み(library.js)でも使う
+    WL.openFolderPicker = (onSelect) => openFolderPicker(onSelect);
     function openFolderPicker(onSelect) {
         let cur = '/';
         const listEl = h('div', { style: { maxHeight: '320px', overflowY: 'auto', border: '1px solid var(--border-primary,#ccc)', borderRadius: '4px' } });

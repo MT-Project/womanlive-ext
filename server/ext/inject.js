@@ -6,6 +6,7 @@
 // =============================================================
 const fs = require('fs');
 const path = require('path');
+const library = require('./library');
 
 const DIST_INDEX = path.join(__dirname, '..', '..', 'client', 'dist', 'index.html');
 
@@ -37,9 +38,12 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/bookmarklist.js',
     '/ext/assets/screenshots.js',
     '/ext/assets/cardenh.js',
+    '/ext/assets/covermode.js',
     '/ext/assets/bulkselect.js',
     '/ext/assets/homelinks.js',
     '/ext/assets/settings.js',
+    // ライブラリ: 設定画面のセクションとヘッダーの表示 (セクションは settingsnav.js が並べ替える)
+    '/ext/assets/library.js',
     // 設定画面のサイドメニュー: settings.js がセクションを差し込んだ後に並べ替えるので、その後ろに置く
     '/ext/assets/settingsnav.js',
 ];
@@ -68,7 +72,11 @@ module.exports = function createInject() {
         try {
             let html = fs.readFileSync(DIST_INDEX, 'utf8');
             if (html.includes('</head>')) {
-                html = html.replace('</head>', injection + '</head>');
+                // 使用中のライブラリ (名前変更などで変わるので配信のたびに作る)。
+                // api.js がこれを見て、全リクエストに「どのライブラリの画面か」を付ける。
+                const lib = JSON.stringify(library.clientInfo()).replace(/</g, '\\u003c');
+                html = html.replace('</head>', `
+  <script>window.WLExtLibrary = ${lib};</script>` + injection + '</head>');
             }
             res.set('Content-Type', 'text/html; charset=utf-8');
             res.set('Cache-Control', 'no-cache');

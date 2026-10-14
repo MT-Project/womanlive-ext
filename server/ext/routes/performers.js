@@ -2,6 +2,7 @@
 // 出演者 ルート
 // =============================================================
 const { db, splitList, joinList, getSetting, setSetting, imageContentType, sharp } = require('../db');
+const library = require('../library');
 
 const PERFORMER_TAGS_KEY = 'ext_performer_preset_tags';
 
@@ -128,13 +129,15 @@ exports.all = (req, res) => {
 };
 
 // POST /ext/api/performers/cleanup-unused  {dryRun}
-// どの動画にも出演者として登録されていない出演者を一括削除する
+// どの動画にも出演者として登録されていない出演者を一括削除する (全ライブラリの動画を見る)
 exports.cleanupUnused = (req, res) => {
     try {
         const dryRun = !!(req.body && req.body.dryRun);
         const rows = db.prepare("SELECT performers FROM ext_video_meta WHERE performers IS NOT NULL AND performers != ''").all();
         const used = new Set();
         rows.forEach(r => splitList(r.performers).forEach(id => { const n = parseInt(id, 10); if (!isNaN(n)) used.add(n); }));
+        // 出演者は全ライブラリ共通なので、ほかのライブラリの動画に出ている人も「使用中」
+        library.performerIdsUsedElsewhere(db).forEach(n => used.add(n));
 
         const all = db.prepare('SELECT id FROM ext_performers').all();
         const unused = all.filter(p => !used.has(p.id)).map(p => p.id);

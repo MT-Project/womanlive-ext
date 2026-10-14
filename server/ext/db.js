@@ -6,6 +6,7 @@
 // =============================================================
 const db = require('../db');
 const { nameKey } = require('./public/namekey');
+const library = require('./library');
 
 let initialized = false;
 
@@ -15,6 +16,9 @@ function initSchema() {
     // 名前ソート用のカスタム関数 (クライアント各一覧と同じ並び順にする)
     // ORDER BY ext_namekey(列) で「かな種別を無視・数字は桁順・頭記号は無視」のソートになる。
     db.function('ext_namekey', { deterministic: true }, (v) => nameKey(v));
+
+    // 追加ライブラリの main に出演者表が残っていたら、共通の出演者へまとめてから作る
+    library.beforeSchema(db);
 
     db.exec(`
         -- 動画ごとの拡張メタデータ (hash をキーに既存 metadata と対応)
@@ -71,8 +75,22 @@ function initSchema() {
             PRIMARY KEY (folder_id, hash)
         );
 
-        -- 出演者マスタ
-        CREATE TABLE IF NOT EXISTS ext_performers (
+        -- 関連動画の事前計算キャッシュ (src_hash ごとに上位 N 件の rel_hash を保持)
+        -- rel_hash が NULL の行は「計算済みだが該当なし」のマーカー。
+        CREATE TABLE IF NOT EXISTS ext_related (
+            src_hash    TEXT,
+            rank        INTEGER,
+            rel_hash    TEXT,
+            score       REAL,
+            computed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (src_hash, rank)
+        );
+        CREATE INDEX IF NOT EXISTS idx_ext_related_rel ON ext_related(rel_hash);
+    `);
+
+    // 出演者マスタ (全ライブラリ共通。追加ライブラリでは既定ライブラリの表を使う → library.js)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS ${library.performersSchema()}ext_performers (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             name       TEXT UNIQUE COLLATE NOCASE,
             furigana   TEXT,
@@ -91,18 +109,6 @@ function initSchema() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
-
-        -- 関連動画の事前計算キャッシュ (src_hash ごとに上位 N 件の rel_hash を保持)
-        -- rel_hash が NULL の行は「計算済みだが該当なし」のマーカー。
-        CREATE TABLE IF NOT EXISTS ext_related (
-            src_hash    TEXT,
-            rank        INTEGER,
-            rel_hash    TEXT,
-            score       REAL,
-            computed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (src_hash, rank)
-        );
-        CREATE INDEX IF NOT EXISTS idx_ext_related_rel ON ext_related(rel_hash);
     `);
 
     initialized = true;

@@ -127,7 +127,6 @@
 
         // --- 拡張情報 (型番/シリーズ/メーカー/レーベル/監督/公開日) ---
         const info = h('div', { class: 'wlext-infobox' });
-        info.appendChild(h('button', { class: 'wlext-edit-btn', onClick: () => openEditDialog(vid, meta) }, '✎ 詳細情報を編集'));
         const grid = h('div', { class: 'wlext-detail-grid' });
 
         function addRow(key, valNode) {
@@ -153,7 +152,7 @@
         }
 
         if (grid.childElementCount === 0) {
-            info.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, '詳細情報は未設定です。右上の「詳細情報を編集」から登録できます。'));
+            info.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, '詳細情報は未設定です。右下の「詳細情報を編集」ボタン（鉛筆）から登録できます。'));
         } else {
             info.appendChild(grid);
         }
@@ -269,6 +268,20 @@
             onClick: () => openTagEditor(vid)
         });
         document.body.appendChild(btn);
+    }
+    // 詳細情報の編集も同じ FAB にする (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集)
+    function ensureEditFab(vid) {
+        if (document.querySelector('.wlext-edit-fab')) return;
+        document.body.appendChild(h('button', {
+            class: 'wlext-tag-fab wlext-edit-fab',
+            title: '詳細情報を編集',
+            html: WL.iconSvg('pencil', 22),
+            onClick: () => {
+                const meta = WL._meta[vid];
+                if (!meta) { WL.toast('詳細情報を読み込み中です'); return; }
+                openEditDialog(vid, meta);
+            }
+        }));
     }
     async function openTagEditor(vid) {
         let current = [];
@@ -429,6 +442,7 @@
         if (!vid) return;
         ensureSearchFab(vid);
         ensureTagFab(vid);
+        ensureEditFab(vid);
         const meta = getMeta(vid);
         if (!meta) return;
 
@@ -456,7 +470,7 @@
         const root = document.getElementById('root');
         if (root) root.querySelectorAll('.wlext-rating-host, .wlext-meta-block').forEach(e => e.remove());
         // 視聴ページ以外では追加FAB(検索/タグ編集)を除去
-        if (!WL.matchWatch()) document.querySelectorAll('.wlext-search-fab, .wlext-tag-fab').forEach(e => e.remove());
+        if (!WL.matchWatch()) document.querySelectorAll('.wlext-search-fab, .wlext-tag-fab, .wlext-edit-fab').forEach(e => e.remove());
         const vid = WL.matchWatch();
         if (vid) { delete WL._meta[vid]; }
     });

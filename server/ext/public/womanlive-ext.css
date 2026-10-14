@@ -203,19 +203,6 @@
     color: var(--status-error, #e51400); opacity: 0.6;
 }
 .wlext-exclude-btn:hover { opacity: 1; }
-.wlext-edit-btn {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: var(--bg-secondary, #eee);
-    border: 1px solid var(--border-primary, #ddd);
-    color: var(--text-secondary, #666);
-    border-radius: 0.25rem;
-    font-size: 0.72rem;
-    padding: 0.2rem 0.5rem;
-    cursor: pointer;
-}
-.wlext-edit-btn:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
 .wlext-release-ago { color: var(--text-secondary, #888); margin-left: 0.4rem; font-size: 0.8rem; }
 
 /* ---- ジャンル ---- */
@@ -263,7 +250,7 @@
 /* ---- 動画情報検索 FAB (品番でFANZA検索) ---- */
 .wlext-search-fab {
     position: fixed;
-    bottom: 5.5rem;   /* 既存の編集FAB(bottom:2rem)の上 */
+    bottom: 9rem;   /* 上から ブックマーク(12.5rem)・動画情報検索(9rem)・タグ編集(5.5rem)・詳細情報を編集(2rem) */
     right: 2rem;
     width: 3rem; height: 3rem; border-radius: 50%;
     background-color: var(--accent, #007acc);
@@ -277,7 +264,7 @@
 /* ---- タグ編集 FAB (本家タグ編集を ext のグループ対応ダイアログへ統一) ---- */
 .wlext-tag-fab {
     position: fixed;
-    bottom: 2rem;   /* 本家タグ編集ボタンと同じ位置。動画情報取得(5.5rem)・ブックマーク(9rem)の下 */
+    bottom: 5.5rem;   /* 詳細情報を編集(.wlext-edit-fab, 2rem=本家タグ編集ボタンの位置)の上 */
     right: 2rem;
     width: 3rem; height: 3rem; border-radius: 50%;
     background-color: var(--accent, #007acc);
@@ -287,6 +274,7 @@
     z-index: 100;
 }
 .wlext-tag-fab:hover { opacity: 1; }
+.wlext-tag-fab.wlext-edit-fab { bottom: 2rem; }
 
 /* ---- DMM 検索結果 ---- */
 .wlext-dmm-thumb {
@@ -1007,10 +995,10 @@ body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 25
 .wlext-bm-watch {
     width: 24px; height: 24px; margin-left: 0.5rem; vertical-align: middle;
 }
-/* 動画ページ: ブックマークを FAB 化 (動画情報取得=5.5rem・タグ編集=2rem の上=9rem) */
+/* 動画ページ: ブックマークを FAB 化 (動画情報検索=9rem・タグ編集=5.5rem・詳細情報を編集=2rem の上) */
 .wlext-bm-btn.wlext-bm-fab {
     position: fixed;
-    bottom: 9rem;
+    bottom: 12.5rem;
     right: 2rem;
     width: 3rem; height: 3rem;
     border-radius: 50%;
@@ -1253,3 +1241,62 @@ body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 25
 }
 .wlext-help-desc { flex: 1; color: var(--text-secondary, #555); }
 .wlext-help-note { font-size: 0.76rem; color: var(--text-secondary, #888); margin: 0.2rem 0; }
+
+/* サムネイル切替(covermode.js)を足すと狭い画面で表示件数ボタンがはみ出すので、表示設定の行を折り返す */
+[class*="statusBar_"] [class*="controlsRow_"] { flex-wrap: wrap; }
+
+/* ---- ライブラリ (library.js) ---- */
+/* ヘッダー: ロゴの右のライブラリ名 */
+.wlext-libpill {
+    display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 1; min-width: 0;
+    margin-left: 0.6rem; padding: 0.2rem 0.55rem; max-width: 12rem;
+    border: 1px solid var(--border-primary, #ccc); border-radius: 999px;
+    background: transparent; color: var(--text-secondary, #666);
+    font-size: 0.78rem; line-height: 1.3; cursor: pointer; white-space: nowrap;
+}
+.wlext-libpill:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
+.wlext-libpill .wlext-ico { flex-shrink: 0; }
+.wlext-libpill-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* スマホ: 検索欄を細らせないよう、アイコンを外して名前だけにする */
+@media (max-width: 600px) {
+    .wlext-libpill { max-width: 5.5rem; margin-left: 0.35rem; padding: 0.15rem 0.45rem; }
+    .wlext-libpill .wlext-ico { display: none; }
+}
+.wlext-lib-menu-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wlext-lib-menu-count { font-size: 0.75rem; color: var(--text-secondary, #888); }
+.wlext-lib-current { font-weight: 700; }
+.wlext-lib-current .wlext-ico { color: var(--accent, #007acc); }
+/* 切り替え中 / 切り替わった後の読み直し */
+.wlext-lib-overlay {
+    position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
+    padding: 1rem; text-align: center; font-size: 1rem;
+    background: rgba(0, 0, 0, 0.6); color: #fff;
+}
+/* 管理画面のセクション */
+.wlext-lib-note { font-size: 0.8rem; color: var(--text-secondary, #777); margin-bottom: 0.6rem; line-height: 1.6; }
+.wlext-lib-warning {
+    font-size: 0.82rem; white-space: pre-wrap; margin-bottom: 0.6rem; padding: 0.5rem 0.7rem; border-radius: 4px;
+    color: var(--status-error, #e51400); border: 1px solid var(--status-error, #e51400);
+}
+.wlext-lib-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.8rem; }
+.wlext-lib-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap;
+    padding: 0.6rem 0.8rem; border: 1px solid var(--border-primary, #ddd); border-radius: 6px;
+}
+.wlext-lib-row-active { border-color: var(--accent, #007acc); }
+.wlext-lib-main { min-width: 0; flex: 1; }
+.wlext-lib-name { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; font-weight: 600; }
+.wlext-lib-name .wlext-ico { color: var(--text-secondary, #888); flex-shrink: 0; }
+.wlext-lib-info { font-size: 0.78rem; color: var(--text-secondary, #888); margin-top: 0.15rem; }
+.wlext-lib-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.wlext-lib-badge {
+    font-size: 0.7rem; font-weight: 400; padding: 0.05rem 0.45rem; border-radius: 999px;
+    border: 1px solid var(--border-primary, #ccc); color: var(--text-secondary, #777);
+}
+.wlext-lib-badge-active { border-color: var(--accent, #007acc); color: var(--accent, #007acc); }
+.wlext-lib-badge-warn { border-color: var(--status-error, #e51400); color: var(--status-error, #e51400); }
+.wlext-lib-h4 { margin: 1rem 0 0.4rem; font-size: 0.9rem; }
+.wlext-lib-form { flex-wrap: wrap; margin-bottom: 0.5rem; }
+.wlext-lib-form .wlext-input { min-width: 12rem; }
+.wlext-lib-mode { flex: 1; }
+.wlext-btn[disabled] { opacity: 0.5; cursor: not-allowed; }

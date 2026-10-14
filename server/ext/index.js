@@ -26,11 +26,18 @@ const replace = require('./routes/replace');
 const makers = require('./routes/makers');
 const file = require('./routes/file');
 const createInject = require('./inject');
+const library = require('./library');
+const libraryRoutes = require('./routes/library');
 
 module.exports = function setupExt(app) {
     // 二重ロード防止 (index.js への追記 と preload の両方が有効でも一度だけ実行)
     if (app.__wlext_loaded) return;
     app.__wlext_loaded = true;
+
+    // 0. ライブラリ: 本体が開いた DB が使用中ライブラリのものか確かめてから、スキーマを作る。
+    //    書き込みのガード(切り替え前の画面からの書き込みを拒否)は本家のルートより先に登録する。
+    library.verify(require('./db').db);
+    app.use(libraryRoutes.middleware);
 
     // 1. 追加テーブルを用意
     initSchema();
@@ -75,6 +82,14 @@ module.exports = function setupExt(app) {
     }));
 
     // 4. 拡張 API ルート
+    // -- ライブラリ
+    app.get('/ext/api/libraries', libraryRoutes.list);
+    app.get('/ext/api/libraries/current', libraryRoutes.current);
+    app.post('/ext/api/libraries', libraryRoutes.create);
+    app.post('/ext/api/libraries/import', libraryRoutes.importDb);
+    app.put('/ext/api/libraries/:id', libraryRoutes.rename);
+    app.post('/ext/api/libraries/:id/switch', libraryRoutes.switchTo);
+    app.delete('/ext/api/libraries/:id', libraryRoutes.remove);
     // -- 設定 / カバー画像
     app.get('/ext/api/settings', cover.getSettings);
     app.post('/ext/api/settings', cover.updateSettings);

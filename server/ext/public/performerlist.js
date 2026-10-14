@@ -40,7 +40,9 @@
         try { all = await WL.api.performersAll(); }
         catch (e) { container.innerHTML = ''; container.appendChild(h('div', null, '読み込みに失敗しました: ' + e.message)); return; }
 
-        const state = { sort: 'furigana', dir: 'asc', tag: '', dupOnly: false };
+        // 出演者は全ライブラリ共通。ライブラリが複数あるときは、既定で今のライブラリに出演作がある人だけ出す
+        const multiLib = !!(WL.library && WL.library.count > 1);
+        const state = { sort: 'furigana', dir: 'asc', tag: '', dupOnly: false, hereOnly: multiLib };
 
         // 全タグ収集
         const tagSet = new Set();
@@ -70,6 +72,12 @@
         const dupChk = h('input', { type: 'checkbox' });
         dupChk.addEventListener('change', () => { state.dupOnly = dupChk.checked; renderGrid(); });
         filterRow.appendChild(h('label', { class: 'wlext-plist-ctl-label', style: { cursor: 'pointer' } }, [dupChk, ' 別名/氏名が重複する出演者のみ']));
+        if (multiLib) {
+            const hereChk = h('input', { type: 'checkbox' });
+            hereChk.checked = state.hereOnly;
+            hereChk.addEventListener('change', () => { state.hereOnly = hereChk.checked; renderGrid(); });
+            filterRow.appendChild(h('label', { class: 'wlext-plist-ctl-label', style: { cursor: 'pointer' } }, [hereChk, ' このライブラリに出演作がある出演者のみ']));
+        }
         controls.appendChild(filterRow);
 
         // メンテナンス行
@@ -92,7 +100,9 @@
             if (!pv.count) { WL.toast('関連動画のない出演者はいません', 'success'); return; }
             WL.dialog('関連動画のない出演者を削除',
                 h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } },
-                    '関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。\nこの操作は元に戻せません。よろしいですか？'),
+                    '関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。'
+                    + (multiLib ? '\n出演者は全ライブラリ共通のため、どのライブラリの動画にも登録されていない人だけが対象です。' : '')
+                    + '\nこの操作は元に戻せません。よろしいですか？'),
                 {
                     saveLabel: '削除する',
                     onSave: async (close) => {
@@ -137,6 +147,7 @@
             let list = all.slice();
             if (state.tag) list = list.filter(p => p.tags.includes(state.tag));
             if (state.dupOnly) list = list.filter(p => p.dup);
+            if (state.hereOnly) list = list.filter(p => p.videoCount > 0);
             list.sort(cmp);
 
             countLabel.textContent = list.length + ' 名';

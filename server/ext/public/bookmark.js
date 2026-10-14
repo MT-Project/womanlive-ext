@@ -108,7 +108,7 @@
 
     /* ---------- ボタン注入 ---------- */
     // 動画ページ: 「動画情報取得」「タグ編集」と同じ FAB として配置
-    // (上から ブックマーク → 動画情報取得 → タグ編集 の順になるよう最上段に置く)
+    // (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集 の順になるよう最上段に置く)
     function ensureWatch() {
         const vid = WL.matchWatch(); if (!vid) return;
         if (document.querySelector('.wlext-bm-fab')) return;
